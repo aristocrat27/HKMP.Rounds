@@ -8,51 +8,177 @@ namespace HKMP.Rounds.Server.Stats
     internal sealed class StatsManager
     {
         private readonly Dictionary<string, StatsData> _players =
-            new Dictionary<string, StatsData>(StringComparer.OrdinalIgnoreCase);
+            new Dictionary<string, StatsData>(
+                StringComparer.OrdinalIgnoreCase);
 
-        public int PlayerCount { get { return _players.Count; } }
+        private readonly Dictionary<string, StatsData> _teams =
+            new Dictionary<string, StatsData>(
+                StringComparer.OrdinalIgnoreCase);
 
-        public void RegisterPlayer(string playerName)
+        public int PlayerCount
         {
-            if (string.IsNullOrWhiteSpace(playerName)) return;
-
-            string name = playerName.Trim();
-            if (_players.ContainsKey(name)) return;
-
-            _players.Add(name, new StatsData(name));
-            Modding.Logger.Log("[HKMP.Rounds] Stats player registered: " + name);
+            get
+            {
+                return _players.Count;
+            }
         }
 
-        public bool AddWin(string playerName)
+        public int TeamCount
         {
-            if (string.IsNullOrWhiteSpace(playerName)) return false;
+            get
+            {
+                return _teams.Count;
+            }
+        }
 
-            string name = playerName.Trim();
+        public void RegisterPlayer(
+            string playerName)
+        {
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return;
+            }
+
+            string name =
+                playerName.Trim();
+
+            if (_players.ContainsKey(name))
+            {
+                return;
+            }
+
+            _players.Add(
+                name,
+                new StatsData(
+                    name,
+                    false));
+
+            Modding.Logger.Log(
+                "[HKMP.Rounds] Stats player registered: " +
+                name);
+        }
+
+        public bool AddWin(
+            string playerName)
+        {
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return false;
+            }
+
+            string name =
+                playerName.Trim();
+
             StatsData stats;
 
-            if (!_players.TryGetValue(name, out stats))
+            if (!_players.TryGetValue(
+                name,
+                out stats))
             {
-                stats = new StatsData(name);
-                _players.Add(name, stats);
+                stats =
+                    new StatsData(
+                        name,
+                        false);
+
+                _players.Add(
+                    name,
+                    stats);
             }
 
             stats.AddWin();
-            Modding.Logger.Log("[HKMP.Rounds] Win recorded: " + name + " = " + stats.Wins);
+
+            Modding.Logger.Log(
+                "[HKMP.Rounds] Player win recorded: " +
+                name +
+                " = " +
+                stats.Wins);
+
             return true;
+        }
+
+        public bool AddTeamWin(
+            string teamName)
+        {
+            if (string.IsNullOrWhiteSpace(teamName))
+            {
+                return false;
+            }
+
+            string name =
+                teamName.Trim();
+
+            StatsData stats;
+
+            if (!_teams.TryGetValue(
+                name,
+                out stats))
+            {
+                stats =
+                    new StatsData(
+                        name,
+                        true);
+
+                _teams.Add(
+                    name,
+                    stats);
+            }
+
+            stats.AddWin();
+
+            Modding.Logger.Log(
+                "[HKMP.Rounds] Team win recorded: " +
+                name +
+                " = " +
+                stats.Wins);
+
+            return true;
+        }
+
+        public bool TryGetStats(
+            string name,
+            out StatsData stats)
+        {
+            stats = null;
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            string key =
+                name.Trim();
+
+            if (_players.TryGetValue(
+                key,
+                out stats))
+            {
+                return true;
+            }
+
+            return _teams.TryGetValue(
+                key,
+                out stats);
         }
 
         public IReadOnlyList<StatsData> GetSortedStats()
         {
             return _players.Values
-                .OrderByDescending(x => x.Wins)
-                .ThenBy(x => x.PlayerName, StringComparer.OrdinalIgnoreCase)
+                .Concat(_teams.Values)
+                .OrderByDescending(
+                    x => x.Wins)
+                .ThenBy(
+                    x => x.PlayerName,
+                    StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 
         public void Reset()
         {
             _players.Clear();
-            Modding.Logger.Log("[HKMP.Rounds] Statistics reset.");
+            _teams.Clear();
+
+            Modding.Logger.Log(
+                "[HKMP.Rounds] Statistics reset.");
         }
     }
 }

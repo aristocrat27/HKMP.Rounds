@@ -52,7 +52,7 @@ namespace HKMP.Rounds.Server.Commands
             }
 
             sender.SendMessage(
-                "Раунд запущен"
+                "Round started."
             );
         }
     }

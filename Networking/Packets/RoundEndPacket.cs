@@ -5,38 +5,118 @@ namespace HKMP.Rounds.Networking.Packets
     internal sealed class RoundEndPacket : IPacketData
     {
         public uint RoundId { get; private set; }
+
         public ushort WinnerId { get; private set; }
+
         public byte WinnerTeam { get; private set; }
-        public bool IsTeamVictory { get { return WinnerTeam != byte.MaxValue; } }
-        public bool IsReliable { get { return true; } }
-        public bool DropReliableDataIfNewerExists { get { return false; } }
 
-        public RoundEndPacket() { WinnerTeam = byte.MaxValue; }
-        public RoundEndPacket(uint roundId, ushort winnerId)
+        public bool IsManualEnd
         {
-            RoundId = roundId;
-            WinnerId = winnerId;
-            WinnerTeam = byte.MaxValue;
-        }
-        public RoundEndPacket(uint roundId, byte winnerTeam)
-        {
-            RoundId = roundId;
-            WinnerId = 0;
-            WinnerTeam = winnerTeam;
+            get
+            {
+                return WinnerId == ushort.MaxValue &&
+                       WinnerTeam == byte.MaxValue;
+            }
         }
 
-        public void WriteData(IPacket packet)
+        public bool IsTeamVictory
         {
-            packet.Write(RoundId);
-            packet.Write(WinnerId);
-            packet.Write(WinnerTeam);
+            get
+            {
+                return WinnerTeam != byte.MaxValue;
+            }
         }
 
-        public void ReadData(IPacket packet)
+        public bool IsReliable
         {
-            RoundId = packet.ReadUInt();
-            WinnerId = packet.ReadUShort();
-            WinnerTeam = packet.ReadByte();
+            get
+            {
+                return true;
+            }
+        }
+
+        public bool DropReliableDataIfNewerExists
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        public RoundEndPacket()
+        {
+            WinnerId =
+                ushort.MaxValue;
+
+            WinnerTeam =
+                byte.MaxValue;
+        }
+
+        public RoundEndPacket(
+            uint roundId)
+        {
+            RoundId =
+                roundId;
+
+            WinnerId =
+                ushort.MaxValue;
+
+            WinnerTeam =
+                byte.MaxValue;
+        }
+
+        public RoundEndPacket(
+            uint roundId,
+            ushort winnerId)
+        {
+            RoundId =
+                roundId;
+
+            WinnerId =
+                winnerId;
+
+            WinnerTeam =
+                byte.MaxValue;
+        }
+
+        public RoundEndPacket(
+            uint roundId,
+            byte winnerTeam)
+        {
+            RoundId =
+                roundId;
+
+            WinnerId =
+                ushort.MaxValue;
+
+            WinnerTeam =
+                winnerTeam;
+        }
+
+        public void WriteData(
+            IPacket packet)
+        {
+            packet.Write(
+                RoundId);
+
+            packet.Write(
+                WinnerId);
+
+            packet.Write(
+                WinnerTeam);
+        }
+
+        public void ReadData(
+            IPacket packet)
+        {
+            RoundId =
+                packet.ReadUInt();
+
+            WinnerId =
+                packet.ReadUShort();
+
+            WinnerTeam =
+                packet.ReadByte();
         }
     }
 }

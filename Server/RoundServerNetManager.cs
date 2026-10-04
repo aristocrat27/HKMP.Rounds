@@ -1,7 +1,6 @@
 using Hkmp.Api.Server;
 using Hkmp.Api.Server.Networking;
 using Hkmp.Networking.Packet;
-
 using HKMP.Rounds.Networking;
 using HKMP.Rounds.Networking.Packets;
 
@@ -28,29 +27,25 @@ namespace HKMP.Rounds.Server
             _netSender =
                 serverApi.NetServer.GetNetworkSender<
                     RoundsClientPacketId>(
-                        addon
-                    );
+                    addon);
 
             _netReceiver =
                 serverApi.NetServer.GetNetworkReceiver<
                     RoundsServerPacketId>(
-                        addon,
-                        InstantiatePacket
-                    );
+                    addon,
+                    InstantiatePacket);
 
             _netReceiver.RegisterPacketHandler<PreparedPacket>(
                 RoundsServerPacketId.Prepared,
-                OnPrepared
-            );
+                OnPrepared);
 
             _netReceiver.RegisterPacketHandler<DeathReportPacket>(
                 RoundsServerPacketId.DeathReport,
-                OnDeathReport
-            );
+                OnDeathReport);
 
-            Modding.Logger.Log(
-                "[HKMP.Rounds] RoundServerNetManager initialized."
-            );
+            _netReceiver.RegisterPacketHandler<HealthReportPacket>(
+                RoundsServerPacketId.HealthReport,
+                OnHealthReport);
         }
 
         private static IPacketData InstantiatePacket(
@@ -63,6 +58,9 @@ namespace HKMP.Rounds.Server
 
                 case RoundsServerPacketId.DeathReport:
                     return new DeathReportPacket();
+
+                case RoundsServerPacketId.HealthReport:
+                    return new HealthReportPacket();
 
                 default:
                     return null;
@@ -80,68 +78,58 @@ namespace HKMP.Rounds.Server
 
             _roundManager.OnPlayerPrepared(
                 playerId,
-                packet.RoundId
-            );
+                packet.RoundId);
         }
 
         private void OnDeathReport(
             ushort playerId,
             DeathReportPacket packet)
         {
-            if (packet == null)
+            if (packet == null ||
+                !_roundManager.IsRoundActive ||
+                packet.RoundId != _roundManager.CurrentRoundId ||
+                !_roundManager.IsAlive(playerId))
             {
                 return;
             }
 
-            ushort victimId =
-                playerId;
+            if (!packet.HasKiller)
+            {
+                _roundManager.OnPlayerDeath(
+                    playerId);
+
+                return;
+            }
 
             ushort killerId =
                 packet.KillerId;
 
-            Modding.Logger.Log(
-                "[HKMP.Rounds] Server received DeathReport. " +
-                "RoundId=" +
-                packet.RoundId +
-                " CurrentRoundId=" +
-                _roundManager.CurrentRoundId +
-                " VictimId=" +
-                victimId +
-                " KillerId=" +
-                killerId
-            );
-
-            if (!_roundManager.IsRoundActive)
-            {
-                return;
-            }
-
-            if (packet.RoundId !=
-                _roundManager.CurrentRoundId)
-            {
-                return;
-            }
-
-            if (!_roundManager.IsAlive(
-                victimId))
-            {
-                return;
-            }
-
-            if (!_roundManager.IsAlive(
-                killerId))
-            {
-                return;
-            }
-
-            if (killerId == victimId)
+            if (killerId == playerId ||
+                !_roundManager.IsAlive(killerId))
             {
                 return;
             }
 
             _roundManager.OnPlayerDeath(
-                victimId
-            );
+                playerId);
+        }
+
+        private void OnHealthReport(
+            ushort playerId,
+            HealthReportPacket packet)
+        {
+            if (packet == null)
+            {
+                return;
+            }
+
+            _roundManager.UpdatePlayerHealth(
+                playerId,
+                packet.RoundId,
+                packet.Health,
+                packet.MaxHealth,
+                packet.BlueHealth,
+                packet.Soul);
         }
 
         public void SendPrepareRound(
@@ -151,10 +139,11 @@ namespace HKMP.Rounds.Server
             _netSender.SendSingleData(
                 RoundsClientPacketId.PrepareRound,
                 new RoundStartPacket(
-                    roundId
-                ),
-                playerId
-            );
+                    roundId,
+                    _roundManager.RoundSoul,
+                    _roundManager.DisableEnemies,
+                    _roundManager.DebugDisableShade),
+                playerId);
         }
 
         public void SendRoundStart(
@@ -164,10 +153,11 @@ namespace HKMP.Rounds.Server
             _netSender.SendSingleData(
                 RoundsClientPacketId.RoundStart,
                 new RoundStartPacket(
-                    roundId
-                ),
-                playerId
-            );
+                    roundId,
+                    _roundManager.RoundSoul,
+                    _roundManager.DisableEnemies,
+                    _roundManager.DebugDisableShade),
+                playerId);
         }
 
         public void BroadcastPlayerDeath(
@@ -177,9 +167,30 @@ namespace HKMP.Rounds.Server
                 RoundsClientPacketId.PlayerDeath,
                 new PlayerDeathPacket(
                     _roundManager.CurrentRoundId,
-                    playerId
-                )
-            );
+                    playerId));
+        }
+
+        public void SendDeathResolution(
+            ushort playerId,
+            int alivePlayersRemaining,
+            bool roundEnded)
+        {
+            _netSender.SendSingleData(
+                RoundsClientPacketId.DeathResolution,
+                new DeathResolutionPacket(
+                    _roundManager.CurrentRoundId,
+                    alivePlayersRemaining,
+                    roundEnded),
+                playerId);
+        }
+
+        public void BroadcastRoundEnd(
+            uint roundId)
+        {
+            _netSender.BroadcastSingleData(
+                RoundsClientPacketId.RoundEnd,
+                new RoundEndPacket(
+                    roundId));
         }
 
         public void BroadcastRoundEnd(
@@ -190,9 +201,7 @@ namespace HKMP.Rounds.Server
                 RoundsClientPacketId.RoundEnd,
                 new RoundEndPacket(
                     roundId,
-                    winnerId
-                )
-            );
+                    winnerId));
         }
 
         public void BroadcastTeamRoundEnd(
@@ -203,9 +212,7 @@ namespace HKMP.Rounds.Server
                 RoundsClientPacketId.RoundEnd,
                 new RoundEndPacket(
                     roundId,
-                    winnerTeam
-                )
-            );
+                    winnerTeam));
         }
     }
 }

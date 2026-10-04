@@ -21,30 +21,24 @@ namespace HKMP.Rounds.Client.Combat
             _deathReported = false;
             _network = network;
 
-            Modding.Logger.Log(
-                "[HKMP.Rounds] ClientDeathTracker initialized."
-            );
+            ModHooks.BeforePlayerDeadHook +=
+                OnBeforePlayerDead;
         }
 
         public static void ReportPvpDeath(
             ushort killerId)
         {
-            if (!_initialized)
+            if (!_initialized ||
+                !RoundClientManager.IsRoundActive ||
+                _network == null)
             {
                 return;
             }
 
-            if (!RoundClientManager.IsRoundActive)
-            {
-                return;
-            }
+            RoundPreparation.NotifyLocalDeathStarted();
+            ClientHealthTracker.ReportCurrentHealth();
 
             if (_deathReported)
-            {
-                return;
-            }
-
-            if (_network == null)
             {
                 return;
             }
@@ -52,14 +46,112 @@ namespace HKMP.Rounds.Client.Combat
             _deathReported = true;
 
             _network.SendDeathReport(
-                killerId
-            );
+                killerId);
+        }
+
+        public static void ReportNonPvpDeath()
+        {
+            if (!_initialized ||
+                !RoundClientManager.IsRoundActive ||
+                _network == null)
+            {
+                return;
+            }
+
+            RoundPreparation.NotifyLocalDeathStarted();
+            ClientHealthTracker.ReportCurrentHealth();
+
+            if (_deathReported)
+            {
+                return;
+            }
+
+            _deathReported = true;
+
+            _network.SendNonPvpDeathReport(
+                RoundClientManager.CurrentRoundId);
+        }
+
+        private static void OnBeforePlayerDead()
+        {
+            if (!_initialized ||
+                !RoundClientManager.IsRoundActive ||
+                _network == null)
+            {
+                return;
+            }
+
+            RoundPreparation.NotifyLocalDeathStarted();
+            ClientHealthTracker.ReportCurrentHealth();
+
+            if (_deathReported)
+            {
+                return;
+            }
+
+            uint roundId =
+                RoundClientManager.CurrentRoundId;
+
+            HeroController hero =
+                HeroController.instance;
+
+            if (hero == null)
+            {
+                ReportNonPvpDeath(
+                    roundId);
+                return;
+            }
+
+            hero.StartCoroutine(
+                ReportNonPvpDeathAfterCurrentDeath(
+                    roundId));
+        }
+
+        private static System.Collections.IEnumerator ReportNonPvpDeathAfterCurrentDeath(
+            uint roundId)
+        {
+            yield return null;
+
+            if (!RoundClientManager.IsRoundActive ||
+                RoundClientManager.CurrentRoundId != roundId ||
+                _deathReported ||
+                _network == null)
+            {
+                yield break;
+            }
+
+            ReportNonPvpDeath(
+                roundId);
+        }
+
+        private static void ReportNonPvpDeath(
+            uint roundId)
+        {
+            if (!_initialized ||
+                !RoundClientManager.IsRoundActive ||
+                RoundClientManager.CurrentRoundId != roundId ||
+                _network == null)
+            {
+                return;
+            }
+
+            RoundPreparation.NotifyLocalDeathStarted();
+            ClientHealthTracker.ReportCurrentHealth();
+
+            if (_deathReported)
+            {
+                return;
+            }
+
+            _deathReported = true;
+
+            _network.SendNonPvpDeathReport(
+                roundId);
         }
 
         public static void Reset()
         {
             _deathReported = false;
-
             LastAttackerTracker.Clear();
         }
 

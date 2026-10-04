@@ -48,11 +48,11 @@ namespace HKMP.Rounds.Server.Commands
             );
 
             sender.SendMessage(
-                "Автостарт " +
+                "Autostart " +
                 (
                     _roundManager.AutoStartEnabled
-                        ? "включён."
-                        : "выключен."
+                        ? "enabled."
+                        : "disabled."
                 )
             );
         }

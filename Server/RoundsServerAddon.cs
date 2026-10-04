@@ -1,16 +1,23 @@
 using Hkmp.Api.Server;
-
 using HKMP.Rounds.Server.Commands;
 using HKMP.Rounds.Server.Stats;
 using HKMP.Rounds.Settings;
-
 using Modding;
 
 namespace HKMP.Rounds.Server
 {
     internal sealed class RoundsServerAddon : ServerAddon
     {
+        private readonly GlobalSettingsStore _settings;
         private RoundManager _roundManager;
+
+        public RoundsServerAddon(
+            GlobalSettingsStore settings)
+        {
+            _settings =
+                settings ??
+                new GlobalSettingsStore();
+        }
 
         protected override string Name
         {
@@ -42,56 +49,50 @@ namespace HKMP.Rounds.Server
             StatsManager statsManager =
                 new StatsManager();
 
-            GlobalSettingsStore settings =
-                new GlobalSettingsStore();
-
             _roundManager =
                 new RoundManager(
                     serverApi,
                     statsManager,
-                    settings
-                );
+                    _settings);
 
             RoundServerNetManager network =
                 new RoundServerNetManager(
                     this,
                     serverApi,
-                    _roundManager
-                );
+                    _roundManager);
 
             _roundManager.SetNetwork(
-                network
-            );
+                network);
+
+            _roundManager.SetTimerIntegration(
+                new RoundsTimerIntegration(
+                    _roundManager,
+                    _settings));
+
+            serverApi.CommandManager.RegisterCommand(
+                new RoundCommand(
+                    _roundManager));
 
             serverApi.CommandManager.RegisterCommand(
                 new StartCommand(
-                    _roundManager
-                )
-            );
+                    _roundManager));
 
             serverApi.CommandManager.RegisterCommand(
                 new ReadyCommand(
-                    _roundManager
-                )
-            );
+                    _roundManager));
 
             serverApi.CommandManager.RegisterCommand(
                 new AutoStartCommand(
-                    _roundManager
-                )
-            );
+                    _roundManager));
 
             serverApi.CommandManager.RegisterCommand(
                 new StatsCommand(
-                    statsManager
-                )
-            );
+                    statsManager));
 
             serverApi.CommandManager.RegisterCommand(
                 new ResetStatsCommand(
-                    statsManager
-                )
-            );
+                    statsManager,
+                    _roundManager));
 
             serverApi.ServerManager.PlayerConnectEvent +=
                 OnPlayerConnect;
@@ -102,8 +103,15 @@ namespace HKMP.Rounds.Server
             Modding.Logger.Log(
                 "[HKMP.Rounds] Server initialized. " +
                 "AutoStart=" +
-                settings.AutoStart
-            );
+                _settings.AutoStart +
+                " RoundSoul=" +
+                _settings.RoundSoul +
+                " DisableEnemies=" +
+                _settings.DisableEnemies +
+                " DebugDisableShade=" +
+                _settings.DebugDisableShade +
+                " TimerIntegration=" +
+                _settings.TimerIntegrationEnabled);
         }
 
         private void OnPlayerConnect(
@@ -115,8 +123,7 @@ namespace HKMP.Rounds.Server
             }
 
             _roundManager.OnPlayerConnect(
-                player
-            );
+                player);
         }
 
         private void OnPlayerDisconnect(
@@ -128,8 +135,7 @@ namespace HKMP.Rounds.Server
             }
 
             _roundManager.OnPlayerDisconnect(
-                player.Id
-            );
+                player.Id);
         }
     }
 }

@@ -1,47 +1,54 @@
 # HKMP.Rounds
 
-Аддон для HKMP, добавляющий систему раундов и статистику побед.
+## Chat Commands
+* `/start`, `/round` — **starts a new round**. *Available only for the admin/host.*
+* `/rd`, `/рд`, `/ready` — marks a player as **Ready** (when auto-start is enabled).
+* `/round end` — **manually ends** the current round.
+* `/round wins <number|off>` — sets or disables the **match win target** (value from `1` to `1000`; can only be changed *before* the round starts).
+* `/round mp <0-198>` — changes the **amount of MP (SOUL)** restored at the beginning of a round.
+* `/stats` — displays the current **win statistics** for all players.
+* `/resetstats` — completely **resets win statistics**. *Available only for the admin.*
 
-## Возможности
+---
 
-### Система раундов
+## Gameplay Features & Phases
 
-Аддон предоставляет серверную систему раундов:
+### Auto-Start
+* When auto-start is enabled, a new round begins automatically once **all connected players** type `/rd` (or its aliases).
+* The server dynamically **displays current readiness status** in the chat.
+* As soon as everyone is ready, the addon starts the round and announces its beginning.
+* The auto-start configuration **persists across hosts**.
 
-* `/start` — немедленно запускает раунд. Только для администратора.
-* `/rd` — отмечает игрока готовым при включённом автостарте.
-* `/autostart` — включает или выключает автостарт. Только для администратора.
-* `/stats` — показывает статистику побед игроков.
-* `/resetstats` — сбрасывает статистику.
+### Before the Round Starts:
+1. **All exits** from the current room (arena) are blocked.
+2. The defeated player's **shade is automatically destroyed** to prevent arena clutter.
+3. Standard room **enemies (mobs) are completely disabled**.
+4. Players are given the configured amount of **mana (SOUL)**.
+5. The host's **last bench position is recorded** for the post-round teleportation.
 
-### Автостарт
+### At the End of the Round:
+* All players are instantly teleported back to the **last tracked bench**.
+* The remaining **HP (masks) and MP (SOUL)** of the **survivors** are displayed in the server chat.
+* *With timer integration enabled:* the `/start`, `/round`, `/rd`, `/рд`, `/ready` commands automatically **trigger the timer countdown**. Upon its expiration, all players are forcefully teleported back to the bench, and the survivors' HP/MP stats are displayed.
 
-При включённом автостарте раунд начинается после того, как **все подключённые игроки** напишут `/rd`.
+---
 
-Игроки видят текущую готовность:
+## HKMP.Timer Integration
+* A round can end by a standard PvP victory condition, a timer timeout, or manually via `/round end`.
+* **In stopwatch mode:** the commands above start its countdown, and the **exact duration** of the combat is displayed in the chat once the round concludes.
 
-```text
-Готово 1/3 игроков
-Готово 2/3 игроков
-Готово 3/3 игроков
-```
+### Mod Menu Options (In-Game Menu)
+The in-game mod menu allows the host to toggle the following settings:
+* [x] **Auto-start** rounds
+* [x] **Disable mobs** in the arena
+* [x] **Disable player shade** spawning
+* [x] **Timer integration**
 
-После готовности всех игроков раунд запускается автоматически.
+---
 
-Настройка автостарта сохраняется между хостами.
+## Community & Credits
+`HKMP.Rounds` is a proud part of the official **Hollow Knight PvP-Events Community**.  
+Announcements, tournaments, custom PvP modes, and additional information can be found here:
+* **[Events HK on Telegram](https://t.me)** *(replace with your actual link)*
 
-### Подготовка раунда
-
-В начале каждого раунда:
-
-* убиваются все враги в текущей комнате;
-* убивается Тень;
-* игрок получает полный запас Soul — **6 кастов / 198 MP**;
-* после завершения подготовки всех игроков начинается раунд.
-
-
-Система раундов основана на системе, разработанной мной для [OneShotPvP](https://github.com/aristocrat27/OneShot-PvP/).
-## HKMP.Rounds является частью PvP-Events-сообщества Hollow Knight.
-## Анонсы, Ивенты, другие PvP-режимы и дополнительная информация в Telegram:
-# [Events HK](https://t.me/Events_HK)
-
+> *A portion of this project's code was optimized and generated using AI. The final codebase is fully maintained, integrated, and thoroughly tested by the project author.*

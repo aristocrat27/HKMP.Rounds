@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-
 using HKMP.Rounds.Client.Combat;
 
 namespace HKMP.Rounds.Client
@@ -7,7 +6,6 @@ namespace HKMP.Rounds.Client
     internal static class RoundClientManager
     {
         private static bool _roundActive;
-
         private static uint _currentRoundId;
 
         private static readonly HashSet<ushort> _deadPlayers =
@@ -32,76 +30,82 @@ namespace HKMP.Rounds.Client
         public static void StartRound(
             uint roundId)
         {
-            _roundActive = true;
+            _roundActive =
+                true;
 
             _currentRoundId =
                 roundId;
 
             _deadPlayers.Clear();
 
-            ClientDeathTracker.Reset();
+            RoundPreparation.BeginRound(
+                roundId);
 
+            ClientDeathTracker.Reset();
+            ClientHealthTracker.Reset();
             LastAttackerTracker.Clear();
         }
 
         public static void EndRound(
             uint roundId)
         {
-            if (!_roundActive)
+            if (!_roundActive ||
+                roundId != _currentRoundId)
             {
                 return;
             }
 
-            if (roundId != _currentRoundId)
-            {
-                return;
-            }
-
-            _roundActive = false;
+            _roundActive =
+                false;
 
             _deadPlayers.Clear();
 
             ClientDeathTracker.Clear();
-
+            ClientHealthTracker.Clear();
             LastAttackerTracker.Clear();
+
+            RoundEnemyController.Disable();
+            DebugShadeController.Disable();
         }
 
         public static void MarkPlayerDead(
             uint roundId,
             ushort playerId)
         {
-            if (!_roundActive)
-            {
-                return;
-            }
-
-            if (roundId != _currentRoundId)
+            if (!_roundActive ||
+                roundId != _currentRoundId)
             {
                 return;
             }
 
             _deadPlayers.Add(
-                playerId
-            );
+                playerId);
         }
 
         public static bool IsPlayerDead(
             ushort playerId)
         {
             return _deadPlayers.Contains(
-                playerId
-            );
+                playerId);
         }
 
         public static void Clear()
         {
-            _roundActive = false;
+            _roundActive =
+                false;
 
-            _currentRoundId = 0;
+            _currentRoundId =
+                0;
 
             _deadPlayers.Clear();
 
+            ClientDeathTracker.Clear();
+            ClientHealthTracker.Clear();
             LastAttackerTracker.Clear();
+
+            RoundEnemyController.Disable();
+            DebugShadeController.Disable();
+            RoundPreparation.Reset();
         }
     }
 }

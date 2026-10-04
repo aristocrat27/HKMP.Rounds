@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 using GlobalEnums;
+using Modding;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 
@@ -91,6 +92,9 @@ namespace HKMP.Rounds.Client.Combat
 
             if (hkmpAssembly == null)
             {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] HKMP assembly could not be resolved through ModHooks.GetMod(\"HKMP\").");
+
                 return;
             }
 
@@ -102,49 +106,44 @@ namespace HKMP.Rounds.Client.Combat
             {
                 InstallHkmpPlayHook(
                     hkmpAssembly,
-                    _hkmpAttackTypes[i]
-                );
+                    _hkmpAttackTypes[i]);
             }
         }
 
         private static Assembly FindHkmpAssembly()
         {
-            Assembly[] assemblies =
-                AppDomain.CurrentDomain.GetAssemblies();
-
-            for (
-                int i = 0;
-                i < assemblies.Length;
-                i++
-            )
+            try
             {
-                Assembly assembly =
-                    assemblies[i];
+                Mod hkmpMod =
+                    (Mod)ModHooks.GetMod(
+                        "HKMP");
 
-                if (assembly == null)
+                if (hkmpMod == null)
                 {
-                    continue;
+                    return null;
                 }
 
-                AssemblyName assemblyName =
-                    assembly.GetName();
+                Type hkmpType =
+                    hkmpMod.GetType();
 
-                if (assemblyName == null)
+                if (hkmpType == null)
                 {
-                    continue;
+                    return null;
                 }
 
-                if (string.Equals(
-                    assemblyName.Name,
-                    "HKMP",
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    return assembly;
-                }
+                return hkmpType.Assembly;
             }
+            catch (Exception exception)
+            {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] Failed to resolve HKMP assembly through ModHooks. " +
+                    "Exception=" +
+                    exception);
 
-            return null;
+                return null;
+            }
         }
+
 
         private static void InstallHkmpPlayHook(
             Assembly hkmpAssembly,
@@ -153,8 +152,7 @@ namespace HKMP.Rounds.Client.Combat
             Type effectType =
                 hkmpAssembly.GetType(
                     typeName,
-                    false
-                );
+                    false);
 
             if (effectType == null)
             {
@@ -173,15 +171,10 @@ namespace HKMP.Rounds.Client.Combat
                         typeof(GameObject),
                         typeof(bool[])
                     },
-                    null
-                );
+                    null);
 
-            if (playMethod == null)
-            {
-                return;
-            }
-
-            if (playMethod.ReturnType != typeof(void))
+            if (playMethod == null ||
+                playMethod.ReturnType != typeof(void))
             {
                 return;
             }
@@ -196,8 +189,7 @@ namespace HKMP.Rounds.Client.Combat
                         selfType,
                         typeof(GameObject),
                         typeof(bool[]),
-                        typeof(void)
-                    );
+                        typeof(void));
 
                 Type hookDelegateType =
                     Expression.GetDelegateType(
@@ -205,15 +197,13 @@ namespace HKMP.Rounds.Client.Combat
                         selfType,
                         typeof(GameObject),
                         typeof(bool[]),
-                        typeof(void)
-                    );
+                        typeof(void));
 
                 MethodInfo genericHookMethod =
                     typeof(LastAttackerTracker).GetMethod(
                         "OnHkmpPlayGeneric",
                         BindingFlags.Static |
-                        BindingFlags.NonPublic
-                    );
+                        BindingFlags.NonPublic);
 
                 if (genericHookMethod == null)
                 {
@@ -223,24 +213,20 @@ namespace HKMP.Rounds.Client.Combat
                 MethodInfo closedHookMethod =
                     genericHookMethod.MakeGenericMethod(
                         origDelegateType,
-                        selfType
-                    );
+                        selfType);
 
                 Delegate hookDelegate =
                     Delegate.CreateDelegate(
                         hookDelegateType,
-                        closedHookMethod
-                    );
+                        closedHookMethod);
 
                 Hook hook =
                     new Hook(
                         playMethod,
-                        hookDelegate
-                    );
+                        hookDelegate);
 
                 _hkmpHooks.Add(
-                    hook
-                );
+                    hook);
             }
             catch (Exception exception)
             {
@@ -248,8 +234,7 @@ namespace HKMP.Rounds.Client.Combat
                     "[HKMP.Rounds] Failed to install HKMP Play hook: " +
                     typeName +
                     " Exception=" +
-                    exception
-                );
+                    exception);
             }
         }
 
@@ -268,34 +253,25 @@ namespace HKMP.Rounds.Client.Combat
             bool attackerResolved =
                 TryGetPlayerIdFromObject(
                     playerObject,
-                    out attackerId
-                );
+                    out attackerId);
 
             if (
                 attackerResolved &&
-                RoundClientManager.IsRoundActive
-            )
+                RoundClientManager.IsRoundActive)
             {
                 _lastAttackerId =
                     attackerId;
 
-                _lastAttackTime =
-                    Time.time;
             }
 
             origDynamic(
                 orig,
                 self,
                 playerObject,
-                effectInfo
-            );
+                effectInfo);
 
-            if (!attackerResolved)
-            {
-                return;
-            }
-
-            if (!RoundClientManager.IsRoundActive)
+            if (!attackerResolved ||
+                !RoundClientManager.IsRoundActive)
             {
                 return;
             }
@@ -303,8 +279,7 @@ namespace HKMP.Rounds.Client.Combat
             RegisterNewDamageHeroes(
                 existingDamageHeroes,
                 attackerId,
-                typeof(TSelf).Name
-            );
+                typeof(TSelf).Name);
         }
 
         private static void origDynamic<TOrig, TSelf>(
@@ -320,15 +295,13 @@ namespace HKMP.Rounds.Client.Combat
             if (delegateValue == null)
             {
                 throw new InvalidOperationException(
-                    "[HKMP.Rounds] HKMP original delegate is null."
-                );
+                    "[HKMP.Rounds] HKMP original delegate is null.");
             }
 
             delegateValue.DynamicInvoke(
                 self,
                 playerObject,
-                effectInfo
-            );
+                effectInfo);
         }
 
         private static HashSet<int> CaptureDamageHeroIds()
@@ -347,28 +320,19 @@ namespace HKMP.Rounds.Client.Combat
             for (
                 int i = 0;
                 i < damageHeroes.Length;
-                i++
-            )
+                i++)
             {
                 DamageHero damageHero =
                     damageHeroes[i];
 
-                if (damageHero == null)
-                {
-                    continue;
-                }
-
-                GameObject gameObject =
-                    damageHero.gameObject;
-
-                if (gameObject == null)
+                if (damageHero == null ||
+                    damageHero.gameObject == null)
                 {
                     continue;
                 }
 
                 result.Add(
-                    gameObject.GetInstanceID()
-                );
+                    damageHero.gameObject.GetInstanceID());
             }
 
             return result;
@@ -395,37 +359,27 @@ namespace HKMP.Rounds.Client.Combat
             for (
                 int i = 0;
                 i < damageHeroes.Length;
-                i++
-            )
+                i++)
             {
                 DamageHero damageHero =
                     damageHeroes[i];
 
-                if (damageHero == null)
-                {
-                    continue;
-                }
-
-                GameObject gameObject =
-                    damageHero.gameObject;
-
-                if (gameObject == null)
+                if (damageHero == null ||
+                    damageHero.gameObject == null)
                 {
                     continue;
                 }
 
                 int instanceId =
-                    gameObject.GetInstanceID();
+                    damageHero.gameObject.GetInstanceID();
 
-                if (existingDamageHeroes.Contains(
-                    instanceId))
+                if (existingDamageHeroes.Contains(instanceId))
                 {
                     continue;
                 }
 
                 _attackOwners[
-                    instanceId
-                ] = attackerId;
+                    instanceId] = attackerId;
             }
         }
 
@@ -442,32 +396,20 @@ namespace HKMP.Rounds.Client.Combat
             bool attackerFound =
                 TryResolveAttacker(
                     go,
-                    out attackerId
-                );
-
-            bool usedRecentAttackerFallback =
-                false;
+                    out attackerId);
 
             if (attackerFound)
             {
                 _lastAttackerId =
                     attackerId;
-            }
-            else
-            {
-                if (
-                    RoundClientManager.IsRoundActive &&
-                    HasDamageHeroInHierarchy(go) &&
-                    TryGetRecentAttacker(
-                        out attackerId
-                    )
-                )
-                {
-                    attackerFound = true;
 
-                    usedRecentAttackerFallback =
-                        true;
-                }
+            }
+            else if (
+                RoundClientManager.IsRoundActive &&
+                HasDamageHeroInHierarchy(go) &&
+                TryGetRecentAttacker(out attackerId))
+            {
+                attackerFound = true;
             }
 
             orig(
@@ -475,43 +417,21 @@ namespace HKMP.Rounds.Client.Combat
                 go,
                 damageSide,
                 damageAmount,
-                hazardType
-            );
+                hazardType);
 
-            if (!attackerFound)
-            {
-                return;
-            }
-
-            if (!RoundClientManager.IsRoundActive)
-            {
-                return;
-            }
-
-            if (self == null)
-            {
-                return;
-            }
-
-            if (HeroController.instance == null)
-            {
-                return;
-            }
-
-            if (self != HeroController.instance)
-            {
-                return;
-            }
-
-            if (self.playerData == null)
+            if (!attackerFound ||
+                !RoundClientManager.IsRoundActive ||
+                self == null ||
+                HeroController.instance == null ||
+                self != HeroController.instance ||
+                self.playerData == null)
             {
                 return;
             }
 
             int health =
                 self.playerData.GetInt(
-                    "health"
-                );
+                    "health");
 
             if (health > 0)
             {
@@ -519,8 +439,7 @@ namespace HKMP.Rounds.Client.Combat
             }
 
             ClientDeathTracker.ReportPvpDeath(
-                attackerId
-            );
+                attackerId);
         }
 
         private static bool TryResolveAttacker(
@@ -581,10 +500,7 @@ namespace HKMP.Rounds.Client.Combat
 
             while (current != null)
             {
-                DamageHero damageHero =
-                    current.GetComponent<DamageHero>();
-
-                if (damageHero != null)
+                if (current.GetComponent<DamageHero>() != null)
                 {
                     return true;
                 }
@@ -601,18 +517,9 @@ namespace HKMP.Rounds.Client.Combat
         {
             playerId = 0;
 
-            if (!_lastAttackerId.HasValue)
-            {
-                return false;
-            }
-
-            if (!RoundClientManager.IsRoundActive)
-            {
-                return false;
-            }
-
-            if (float.IsNegativeInfinity(
-                _lastAttackTime))
+            if (!_lastAttackerId.HasValue ||
+                !RoundClientManager.IsRoundActive ||
+                float.IsNegativeInfinity(_lastAttackTime))
             {
                 return false;
             }
@@ -621,12 +528,8 @@ namespace HKMP.Rounds.Client.Combat
                 Time.time -
                 _lastAttackTime;
 
-            if (age < 0f)
-            {
-                return false;
-            }
-
-            if (age > LastAttackFallbackWindow)
+            if (age < 0f ||
+                age > LastAttackFallbackWindow)
             {
                 return false;
             }
@@ -673,8 +576,7 @@ namespace HKMP.Rounds.Client.Combat
         {
             playerId = 0;
 
-            if (string.IsNullOrEmpty(
-                objectName))
+            if (string.IsNullOrEmpty(objectName))
             {
                 return false;
             }
@@ -691,8 +593,7 @@ namespace HKMP.Rounds.Client.Combat
 
             string idText =
                 objectName.Substring(
-                    prefix.Length
-                );
+                    prefix.Length);
 
             ushort parsedId;
 
@@ -715,7 +616,6 @@ namespace HKMP.Rounds.Client.Combat
             if (!_lastAttackerId.HasValue)
             {
                 playerId = 0;
-
                 return false;
             }
 

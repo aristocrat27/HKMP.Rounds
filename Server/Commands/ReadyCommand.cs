@@ -20,12 +20,16 @@ namespace HKMP.Rounds.Server.Commands
                 return "/rd";
             }
         }
-
+          
         public string[] Aliases
         {
             get
             {
-                return new string[0];
+                return new[]
+                {
+                    "/рд",
+                    "/ready"
+                };
             }
         }
 
@@ -47,7 +51,7 @@ namespace HKMP.Rounds.Server.Commands
             if (playerSender == null)
             {
                 sender.SendMessage(
-                    "/rd можно использовать только игроку."
+                    "/rd can only be used by a player."
                 );
 
                 return;
@@ -56,7 +60,7 @@ namespace HKMP.Rounds.Server.Commands
             if (!_roundManager.AutoStartEnabled)
             {
                 sender.SendMessage(
-                    "Автостарт выключен."
+                    "Autostart is disabled."
                 );
 
                 return;
@@ -66,7 +70,7 @@ namespace HKMP.Rounds.Server.Commands
                 _roundManager.IsWaitingForPreparation)
             {
                 sender.SendMessage(
-                    "Сейчас уже идёт раунд или его подготовка."
+                    "A round is already active or preparing."
                 );
 
                 return;
@@ -80,14 +84,14 @@ namespace HKMP.Rounds.Server.Commands
             if (!markedReady)
             {
                 sender.SendMessage(
-                    "Не удалось отметить готовность."
+                    "Could not mark you as ready."
                 );
 
                 return;
             }
 
             sender.SendMessage(
-                "Вы готовы к следующему раунду."
+                "You are ready for the next round."
             );
         }
     }

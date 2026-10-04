@@ -5,6 +5,7 @@ namespace HKMP.Rounds.Networking
         PrepareRound = 0,
         RoundStart = 1,
         PlayerDeath = 2,
-        RoundEnd = 3
+        RoundEnd = 3,
+        DeathResolution = 4
     }
 }
