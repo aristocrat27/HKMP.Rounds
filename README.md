@@ -47,7 +47,7 @@ The in-game mod menu allows the host to toggle the following settings:
 ---
 
 ## Community & Credits
-`HKMP.Rounds` is a proud part of the official **Hollow Knight PvP-Events Community**.  
+`HKMP.Rounds` is a proud part of the official RU **Hollow Knight PvP-Events Community**.  
 Announcements, tournaments, custom PvP modes, and additional information can be found here:
 * **[Events HK on Telegram]([https://t.me](https://t.me/Events_HK))**
 
