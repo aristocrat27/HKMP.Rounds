@@ -3,6 +3,7 @@
 ## English
 
 An HKMP addon that adds a round system, PvP mode switching, match settings management, bench management, map switching, and Phantom Mantis Village creation, managed via an in-game UI (`F6` by default).
+<img width="1265" height="1002" alt="image" src="https://github.com/user-attachments/assets/1a391e4c-2247-45a4-ae7f-127b9c01ed44" />
 
 ### PvP Mode Selection
 * **Quick:** no healing; specific charms (Quick Focus, Kingsoul, Spore Shroom, Hiveblood, Lifeblood, Deep Focus, Weaversong) are removed, while all others are granted.
@@ -21,7 +22,8 @@ An HKMP addon that adds a round system, PvP mode switching, match settings manag
 * Configuration is handled via the `Open Settings` keybind under `Options → Mods → HKMP.Rounds`, utilizing native Hollow Knight respawn markers with optional Benchwarp support.
 
 ## Community
-Part of the official RU **Hollow Knight PvP-Events Community** (`[Events HK on Telegram](https://t.me)`).
+Part of the official RU **Hollow Knight PvP-Events Community**  
+**[Events HK on Telegram](https://t.me/Events_HK)**
 
 > *A portion of this project's code was optimized and generated using AI. The final codebase is fully maintained, integrated, and thoroughly tested by the project author.*
 
@@ -30,6 +32,7 @@ Part of the official RU **Hollow Knight PvP-Events Community** (`[Events HK on T
 ## Russian
 
 HKMP-аддон, добавляющий систему раундов, переключение режимов PvP, управление настройками матча, скамейками, картами и Фантомными Деревнями богомолов через внутриигровой UI (`F6` по умолчанию).
+<img width="1265" height="1002" alt="image" src="https://github.com/user-attachments/assets/aaeb8aae-c869-4fe2-9d32-c09862fdd2a6" />
 
 ### Выбор режима PvP
 * **Quick** — режим без лечения: ряд амулетов убирается (*Быстрый фокус*, *Душа короля* и др.), остальные выдаются автоматически.
@@ -48,4 +51,5 @@ HKMP-аддон, добавляющий систему раундов, пере�
 * Управление параметрами осуществляется через клавишу `Open Settings` в `Настройки → Mods → HKMP.Rounds` с использованием стандартных точек возрождения игры и поддержкой Benchwarp.
 
 ## Сообщество
-Часть официального русскоязычного сообщества **Hollow Knight PvP-Events** (`[Events HK в Telegram](https://t.me)`).
+Часть официального русскоязычного сообщества **Hollow Knight PvP-Events**  
+**[Events HK on Telegram](https://t.me/Events_HK)**
