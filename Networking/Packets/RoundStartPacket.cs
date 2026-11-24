@@ -1,4 +1,5 @@
 using Hkmp.Networking.Packet;
+using HKMP.Rounds.Settings;
 
 namespace HKMP.Rounds.Networking.Packets
 {
@@ -11,6 +12,10 @@ namespace HKMP.Rounds.Networking.Packets
         public bool DisableEnemies { get; private set; }
 
         public bool DebugDisableShade { get; private set; }
+
+        public PvpMode PvpMode { get; private set; }
+
+        public bool GiveLifebloodMasks { get; private set; }
 
         public bool IsReliable
         {
@@ -31,18 +36,23 @@ namespace HKMP.Rounds.Networking.Packets
         public RoundStartPacket()
         {
             RoundSoul = 198;
+            PvpMode = HKMP.Rounds.Settings.PvpMode.Quick;
         }
 
         public RoundStartPacket(
             uint roundId,
             int roundSoul,
             bool disableEnemies,
-            bool debugDisableShade)
+            bool debugDisableShade,
+            PvpMode pvpMode,
+            bool giveLifebloodMasks)
         {
             RoundId = roundId;
             RoundSoul = roundSoul;
             DisableEnemies = disableEnemies;
             DebugDisableShade = debugDisableShade;
+            PvpMode = pvpMode == HKMP.Rounds.Settings.PvpMode.Long || pvpMode == HKMP.Rounds.Settings.PvpMode.OneShot ? pvpMode : HKMP.Rounds.Settings.PvpMode.Quick;
+            GiveLifebloodMasks = giveLifebloodMasks;
         }
 
         public void WriteData(
@@ -52,6 +62,8 @@ namespace HKMP.Rounds.Networking.Packets
             packet.Write(RoundSoul);
             packet.Write(DisableEnemies);
             packet.Write(DebugDisableShade);
+            packet.Write((byte)PvpMode);
+            packet.Write(GiveLifebloodMasks);
         }
 
         public void ReadData(
@@ -61,6 +73,9 @@ namespace HKMP.Rounds.Networking.Packets
             RoundSoul = packet.ReadInt();
             DisableEnemies = packet.ReadBool();
             DebugDisableShade = packet.ReadBool();
+            PvpMode mode = (PvpMode)packet.ReadByte();
+            PvpMode = mode == HKMP.Rounds.Settings.PvpMode.Long || mode == HKMP.Rounds.Settings.PvpMode.OneShot ? mode : HKMP.Rounds.Settings.PvpMode.Quick;
+            GiveLifebloodMasks = packet.ReadBool();
         }
     }
 }

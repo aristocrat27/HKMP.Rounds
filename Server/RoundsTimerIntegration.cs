@@ -11,6 +11,7 @@ namespace HKMP.Rounds.Server
 
         private readonly RoundManager _roundManager;
         private readonly GlobalSettingsStore _settings;
+        private readonly object _syncRoot = new object();
 
         private Type _apiType;
         private MethodInfo _setExpirationHandler;
@@ -54,6 +55,11 @@ namespace HKMP.Rounds.Server
 
             BindExpirationHandler();
 
+            lock (_syncRoot)
+            {
+                _activeRoundId = roundId;
+            }
+
             try
             {
                 object result =
@@ -70,10 +76,15 @@ namespace HKMP.Rounds.Server
 
                 if (started)
                 {
-                    _activeRoundId =
-                        roundId;
-
                     return true;
+                }
+
+                lock (_syncRoot)
+                {
+                    if (_activeRoundId == roundId)
+                    {
+                        _activeRoundId = 0;
+                    }
                 }
 
                 Modding.Logger.Log(
@@ -85,6 +96,14 @@ namespace HKMP.Rounds.Server
             }
             catch (Exception exception)
             {
+                lock (_syncRoot)
+                {
+                    if (_activeRoundId == roundId)
+                    {
+                        _activeRoundId = 0;
+                    }
+                }
+
                 Modding.Logger.LogError(
                     "[HKMP.Rounds] Failed to start HKMP.Timer for round " +
                     roundId +
@@ -98,13 +117,15 @@ namespace HKMP.Rounds.Server
         public bool EndRound(
             uint roundId)
         {
-            if (roundId == 0 ||
-                _activeRoundId != roundId)
+            lock (_syncRoot)
             {
-                return true;
-            }
+                if (roundId == 0 || _activeRoundId != roundId)
+                {
+                    return true;
+                }
 
-            _activeRoundId = 0;
+                _activeRoundId = 0;
+            }
 
             if (!ResolveApi() ||
                 _endRound == null)
@@ -174,17 +195,17 @@ namespace HKMP.Rounds.Server
         private void OnTimerExpired(
             uint roundId)
         {
-            if (roundId == 0 ||
-                _activeRoundId != roundId ||
-                _roundManager == null)
+            lock (_syncRoot)
             {
-                return;
+                if (roundId == 0 || _activeRoundId != roundId || _roundManager == null)
+                {
+                    return;
+                }
+
+                _activeRoundId = 0;
             }
 
-            _activeRoundId = 0;
-
-            _roundManager.EndRoundByTimer(
-                roundId);
+            _roundManager.EndRoundByTimer(roundId);
         }
 
         private bool ResolveApi()

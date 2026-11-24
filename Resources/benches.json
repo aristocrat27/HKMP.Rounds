@@ -1,0 +1,345 @@
+[
+  {
+    "name": "Dirtmouth",
+    "areaName": "Cliffs",
+    "sceneName": "Town",
+    "respawnMarker": "RestBench",
+    "mapZone": "TOWN"
+  },
+  {
+    "name": "Mato",
+    "areaName": "Cliffs",
+    "sceneName": "Room_nailmaster",
+    "respawnMarker": "RestBench",
+    "mapZone": "CLIFFS"
+  },
+  {
+    "name": "Hot Springs",
+    "areaName": "Crossroads",
+    "sceneName": "Crossroads_30",
+    "respawnMarker": "RestBench",
+    "mapZone": "CROSSROADS"
+  },
+  {
+    "name": "Stag",
+    "areaName": "Crossroads",
+    "sceneName": "Crossroads_47",
+    "respawnMarker": "RestBench",
+    "mapZone": "CROSSROADS"
+  },
+  {
+    "name": "Salubra",
+    "areaName": "Crossroads",
+    "sceneName": "Crossroads_04",
+    "respawnMarker": "RestBench",
+    "mapZone": "CROSSROADS"
+  },
+  {
+    "name": "Ancestral Mound",
+    "areaName": "Crossroads",
+    "sceneName": "Crossroads_ShamanTemple",
+    "respawnMarker": "BoneBench",
+    "mapZone": "SHAMAN_TEMPLE"
+  },
+  {
+    "name": "Black Egg Temple",
+    "areaName": "Crossroads",
+    "sceneName": "Room_Final_Boss_Atrium",
+    "respawnMarker": "RestBench",
+    "mapZone": "FINAL_BOSS"
+  },
+  {
+    "name": "Waterfall",
+    "areaName": "Greenpath",
+    "sceneName": "Fungus1_01b",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Stone Sanctuary",
+    "areaName": "Greenpath",
+    "sceneName": "Fungus1_37",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Toll",
+    "areaName": "Greenpath",
+    "sceneName": "Fungus1_31",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Stag",
+    "areaName": "Greenpath",
+    "sceneName": "Fungus1_16_alt",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Lake of Unn",
+    "areaName": "Greenpath",
+    "sceneName": "Room_Slug_Shrine",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Sheo",
+    "areaName": "Greenpath",
+    "sceneName": "Fungus1_15",
+    "respawnMarker": "RestBench",
+    "mapZone": "GREEN_PATH"
+  },
+  {
+    "name": "Archives",
+    "areaName": "Fog Canyon",
+    "sceneName": "Fungus3_archive",
+    "respawnMarker": "RestBench",
+    "mapZone": "FOG_CANYON"
+  },
+  {
+    "name": "Queen's Station",
+    "areaName": "Fungal Wastes",
+    "sceneName": "Fungus2_02",
+    "respawnMarker": "RestBench",
+    "mapZone": "QUEENS_STATION"
+  },
+  {
+    "name": "Leg Eater",
+    "areaName": "Fungal Wastes",
+    "sceneName": "Fungus2_26",
+    "respawnMarker": "RestBench",
+    "mapZone": "WASTES"
+  },
+  {
+    "name": "Bretta",
+    "areaName": "Fungal Wastes",
+    "sceneName": "Fungus2_13",
+    "respawnMarker": "RestBench",
+    "mapZone": "WASTES"
+  },
+  {
+    "name": "Mantis Village",
+    "areaName": "Fungal Wastes",
+    "sceneName": "Fungus2_31",
+    "respawnMarker": "RestBench",
+    "mapZone": "WASTES"
+  },
+  {
+    "name": "Quirrel",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins1_02",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "Toll",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins1_31",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "City Storerooms",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins1_29",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "Watcher's Spire",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins1_18",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "King's Station",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins2_08",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "Pleasure House",
+    "areaName": "City of Tears",
+    "sceneName": "Ruins_Bathhouse",
+    "respawnMarker": "RestBench",
+    "mapZone": "CITY"
+  },
+  {
+    "name": "Waterways",
+    "areaName": "Royal Waterways",
+    "sceneName": "Waterways_02",
+    "respawnMarker": "RestBench",
+    "mapZone": "WATERWAYS"
+  },
+  {
+    "name": "Godhome Atrium",
+    "areaName": "Godhome",
+    "sceneName": "GG_Atrium",
+    "respawnMarker": "RestBench",
+    "mapZone": "GODS_GLORY"
+  },
+  {
+    "name": "Godhome Roof",
+    "areaName": "Godhome",
+    "sceneName": "GG_Atrium_Roof",
+    "respawnMarker": "RestBench (1)",
+    "mapZone": "GODS_GLORY"
+  },
+  {
+    "name": "Hall of Gods",
+    "areaName": "Godhome",
+    "sceneName": "GG_Workshop",
+    "respawnMarker": "RestBench (1)",
+    "mapZone": "GODS_GLORY"
+  },
+  {
+    "name": "Hot Springs",
+    "areaName": "Deepnest",
+    "sceneName": "Deepnest_30",
+    "respawnMarker": "RestBench",
+    "mapZone": "DEEPNEST"
+  },
+  {
+    "name": "Failed Tramway",
+    "areaName": "Deepnest",
+    "sceneName": "Deepnest_14",
+    "respawnMarker": "RestBench",
+    "mapZone": "DEEPNEST"
+  },
+  {
+    "name": "Beast's Den",
+    "areaName": "Deepnest",
+    "sceneName": "Deepnest_Spider_Town",
+    "respawnMarker": "RestBench Return",
+    "mapZone": "BEASTS_DEN"
+  },
+  {
+    "name": "Toll",
+    "areaName": "Ancient Basin",
+    "sceneName": "Abyss_18",
+    "respawnMarker": "RestBench",
+    "mapZone": "ABYSS"
+  },
+  {
+    "name": "Hidden Station",
+    "areaName": "Ancient Basin",
+    "sceneName": "Abyss_22",
+    "respawnMarker": "RestBench",
+    "mapZone": "ABYSS"
+  },
+  {
+    "name": "Oro",
+    "areaName": "Kingdom's Edge",
+    "sceneName": "Deepnest_East_06",
+    "respawnMarker": "RestBench",
+    "mapZone": "OUTSKIRTS"
+  },
+  {
+    "name": "Camp",
+    "areaName": "Kingdom's Edge",
+    "sceneName": "Deepnest_East_13",
+    "respawnMarker": "RestBench",
+    "mapZone": "OUTSKIRTS"
+  },
+  {
+    "name": "Colosseum",
+    "areaName": "Kingdom's Edge",
+    "sceneName": "Room_Colosseum_02",
+    "respawnMarker": "RestBench",
+    "mapZone": "COLOSSEUM"
+  },
+  {
+    "name": "Hive",
+    "areaName": "The Hive",
+    "sceneName": "Hive_01",
+    "respawnMarker": "RestBench",
+    "mapZone": "HIVE"
+  },
+  {
+    "name": "Dark Room",
+    "areaName": "Crystal Peak",
+    "sceneName": "Mines_29",
+    "respawnMarker": "RestBench",
+    "mapZone": "MINES"
+  },
+  {
+    "name": "Crystal Guardian",
+    "areaName": "Crystal Peak",
+    "sceneName": "Mines_18",
+    "respawnMarker": "RestBench",
+    "mapZone": "MINES"
+  },
+  {
+    "name": "Stag",
+    "areaName": "Resting Grounds",
+    "sceneName": "RestingGrounds_09",
+    "respawnMarker": "RestBench",
+    "mapZone": "RESTING_GROUNDS"
+  },
+  {
+    "name": "Grey Mourner",
+    "areaName": "Resting Grounds",
+    "sceneName": "RestingGrounds_12",
+    "respawnMarker": "RestBench",
+    "mapZone": "RESTING_GROUNDS"
+  },
+  {
+    "name": "Cornifer",
+    "areaName": "Queen's Gardens",
+    "sceneName": "Fungus1_24",
+    "respawnMarker": "RestBench",
+    "mapZone": "ROYAL_GARDENS"
+  },
+  {
+    "name": "Toll",
+    "areaName": "Queen's Gardens",
+    "sceneName": "Fungus3_50",
+    "respawnMarker": "RestBench",
+    "mapZone": "ROYAL_GARDENS"
+  },
+  {
+    "name": "Stag",
+    "areaName": "Queen's Gardens",
+    "sceneName": "Fungus3_40",
+    "respawnMarker": "RestBench",
+    "mapZone": "ROYAL_GARDENS"
+  },
+  {
+    "name": "Entrance",
+    "areaName": "White Palace",
+    "sceneName": "White_Palace_01",
+    "respawnMarker": "WhiteBench",
+    "mapZone": "WHITE_PALACE"
+  },
+  {
+    "name": "Atrium",
+    "areaName": "White Palace",
+    "sceneName": "White_Palace_03_hub",
+    "respawnMarker": "WhiteBench",
+    "mapZone": "WHITE_PALACE"
+  },
+  {
+    "name": "Balcony",
+    "areaName": "White Palace",
+    "sceneName": "White_Palace_06",
+    "respawnMarker": "RestBench",
+    "mapZone": "WHITE_PALACE"
+  },
+  {
+    "name": "Upper Tram",
+    "areaName": "Tram",
+    "sceneName": "Room_Tram_RG",
+    "respawnMarker": "RestBench",
+    "mapZone": "TRAM_UPPER"
+  },
+  {
+    "name": "Lower Tram",
+    "areaName": "Tram",
+    "sceneName": "Room_Tram",
+    "respawnMarker": "RestBench",
+    "mapZone": "TRAM_LOWER"
+  }
+]

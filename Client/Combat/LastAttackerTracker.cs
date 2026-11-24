@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using HKMP.Rounds.Client;
 
 using GlobalEnums;
 using Modding;
@@ -26,6 +27,10 @@ namespace HKMP.Rounds.Client.Combat
             _attackOwners =
                 new Dictionary<int, ushort>();
 
+        private static readonly Dictionary<int, GameObject>
+            _spawnedAttackObjects =
+                new Dictionary<int, GameObject>();
+
         private static readonly List<Hook>
             _hkmpHooks =
                 new List<Hook>();
@@ -42,26 +47,7 @@ namespace HKMP.Rounds.Client.Combat
                 "Hkmp.Animation.Effects.WallSlash"
             };
 
-        public static bool HasAttacker
-        {
-            get
-            {
-                return _lastAttackerId.HasValue;
-            }
-        }
 
-        public static ushort LastAttackerId
-        {
-            get
-            {
-                if (_lastAttackerId.HasValue)
-                {
-                    return _lastAttackerId.Value;
-                }
-
-                return ushort.MaxValue;
-            }
-        }
 
         public static void Initialize()
         {
@@ -78,6 +64,7 @@ namespace HKMP.Rounds.Client.Combat
                 -Mathf.Infinity;
 
             _attackOwners.Clear();
+            _spawnedAttackObjects.Clear();
 
             On.HeroController.TakeDamage +=
                 OnHeroTakeDamage;
@@ -98,15 +85,36 @@ namespace HKMP.Rounds.Client.Combat
                 return;
             }
 
-            for (
-                int i = 0;
-                i < _hkmpAttackTypes.Length;
-                i++
-            )
+            HashSet<string> hookedTypes = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < _hkmpAttackTypes.Length; i++)
             {
-                InstallHkmpPlayHook(
-                    hkmpAssembly,
-                    _hkmpAttackTypes[i]);
+                hookedTypes.Add(_hkmpAttackTypes[i]);
+                InstallHkmpPlayHook(hkmpAssembly, _hkmpAttackTypes[i]);
+            }
+
+            try
+            {
+                Type[] allTypes = hkmpAssembly.GetTypes();
+                for (int i = 0; i < allTypes.Length; i++)
+                {
+                    Type type = allTypes[i];
+                    if (type == null || type.IsAbstract || type.IsInterface)
+                    {
+                        continue;
+                    }
+
+                    string fullName = type.FullName ?? string.Empty;
+                    if (!fullName.StartsWith("Hkmp.Animation.Effects.", StringComparison.Ordinal) ||
+                        !hookedTypes.Add(fullName))
+                    {
+                        continue;
+                    }
+
+                    InstallHkmpPlayHook(hkmpAssembly, fullName);
+                }
+            }
+            catch
+            {
             }
         }
 
@@ -245,41 +253,29 @@ namespace HKMP.Rounds.Client.Combat
             bool[] effectInfo)
             where TOrig : class
         {
-            HashSet<int> existingDamageHeroes =
-                CaptureDamageHeroIds();
-
+            HashSet<int> existingDamageHeroes = CaptureDamageHeroIds();
             ushort attackerId;
+            bool attackerResolved = TryGetPlayerIdFromObject(playerObject, out attackerId);
 
-            bool attackerResolved =
-                TryGetPlayerIdFromObject(
-                    playerObject,
-                    out attackerId);
-
-            if (
-                attackerResolved &&
-                RoundClientManager.IsRoundActive)
-            {
-                _lastAttackerId =
-                    attackerId;
-
-            }
-
-            origDynamic(
-                orig,
-                self,
-                playerObject,
-                effectInfo);
-
-            if (!attackerResolved ||
-                !RoundClientManager.IsRoundActive)
+            if (attackerResolved &&
+                (!PvpModeClientController.IsAttackerAllowed(attackerId) ||
+                 !PhantomMapClientController.IsPlayerInSamePhantomMap(attackerId)))
             {
                 return;
             }
 
-            RegisterNewDamageHeroes(
-                existingDamageHeroes,
-                attackerId,
-                typeof(TSelf).Name);
+            if (attackerResolved && RoundClientManager.IsRoundActive)
+            {
+                _lastAttackerId = attackerId;
+                _lastAttackTime = Time.time;
+            }
+
+            origDynamic(orig, self, playerObject, effectInfo);
+
+            if (attackerResolved)
+            {
+                RegisterNewDamageHeroes(existingDamageHeroes, attackerId, typeof(TSelf).Name);
+            }
         }
 
         private static void origDynamic<TOrig, TSelf>(
@@ -343,11 +339,6 @@ namespace HKMP.Rounds.Client.Combat
             ushort attackerId,
             string attackType)
         {
-            if (!RoundClientManager.IsRoundActive)
-            {
-                return;
-            }
-
             DamageHero[] damageHeroes =
                 UnityEngine.Object.FindObjectsOfType<DamageHero>();
 
@@ -378,8 +369,8 @@ namespace HKMP.Rounds.Client.Combat
                     continue;
                 }
 
-                _attackOwners[
-                    instanceId] = attackerId;
+                _attackOwners[instanceId] = attackerId;
+                _spawnedAttackObjects[instanceId] = damageHero.gameObject;
             }
         }
 
@@ -400,9 +391,13 @@ namespace HKMP.Rounds.Client.Combat
 
             if (attackerFound)
             {
-                _lastAttackerId =
-                    attackerId;
+                if (!PvpModeClientController.IsAttackerAllowed(attackerId))
+                {
+                    return;
+                }
 
+                _lastAttackerId = attackerId;
+                _lastAttackTime = Time.time;
             }
             else if (
                 RoundClientManager.IsRoundActive &&
@@ -410,6 +405,11 @@ namespace HKMP.Rounds.Client.Combat
                 TryGetRecentAttacker(out attackerId))
             {
                 attackerFound = true;
+            }
+
+            if (attackerFound && !PvpModeClientController.IsAttackerAllowed(attackerId))
+            {
+                return;
             }
 
             orig(
@@ -473,6 +473,12 @@ namespace HKMP.Rounds.Client.Combat
 
             while (current != null)
             {
+                if (_attackOwners.TryGetValue(current.gameObject.GetInstanceID(), out registeredId))
+                {
+                    attackerId = registeredId;
+                    return true;
+                }
+
                 if (TryParsePlayerContainer(
                     current.name,
                     out attackerId))
@@ -512,12 +518,13 @@ namespace HKMP.Rounds.Client.Combat
             return false;
         }
 
-        private static bool TryGetRecentAttacker(
+        internal static bool TryGetRecentAttacker(
             out ushort playerId)
         {
             playerId = 0;
 
             if (!_lastAttackerId.HasValue ||
+                !PvpModeClientController.IsAttackerAllowed(_lastAttackerId.Value) ||
                 !RoundClientManager.IsRoundActive ||
                 float.IsNegativeInfinity(_lastAttackTime))
             {
@@ -610,29 +617,57 @@ namespace HKMP.Rounds.Client.Combat
             return true;
         }
 
-        public static bool TryGetLastAttacker(
-            out ushort playerId)
+
+        public static void FilterSpawnedAttacks()
         {
-            if (!_lastAttackerId.HasValue)
+            string sceneName = PhantomMapClientController.GetCurrentLogicalScene();
+            if ((!string.Equals(sceneName, "Fungus2_15", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(sceneName, "Fungus2_31", StringComparison.OrdinalIgnoreCase)) ||
+                _spawnedAttackObjects.Count == 0)
             {
-                playerId = 0;
-                return false;
+                return;
             }
 
-            playerId =
-                _lastAttackerId.Value;
+            List<int> remove = new List<int>();
+            foreach (KeyValuePair<int, GameObject> pair in _spawnedAttackObjects)
+            {
+                GameObject attackObject = pair.Value;
+                ushort ownerId;
+                if (attackObject == null || !_attackOwners.TryGetValue(pair.Key, out ownerId))
+                {
+                    remove.Add(pair.Key);
+                    continue;
+                }
 
-            return true;
+                if (!PvpModeClientController.IsAttackerAllowed(ownerId) ||
+                    !PhantomMapClientController.IsPlayerInSamePhantomMap(ownerId))
+                {
+                    ParticleSystem[] particles = attackObject.GetComponentsInChildren<ParticleSystem>(true);
+                    for (int p = 0; p < particles.Length; p++)
+                    {
+                        if (particles[p] != null)
+                        {
+                            particles[p].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                        }
+                    }
+                    attackObject.SetActive(false);
+                    remove.Add(pair.Key);
+                    _attackOwners.Remove(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < remove.Count; i++)
+            {
+                _spawnedAttackObjects.Remove(remove[i]);
+            }
         }
 
         public static void Clear()
         {
             _lastAttackerId = null;
-
-            _lastAttackTime =
-                -Mathf.Infinity;
-
+            _lastAttackTime = -Mathf.Infinity;
             _attackOwners.Clear();
+            _spawnedAttackObjects.Clear();
         }
     }
 }

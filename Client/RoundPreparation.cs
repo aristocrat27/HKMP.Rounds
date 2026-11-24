@@ -1,10 +1,13 @@
-using GlobalEnums;
+﻿using GlobalEnums;
 using HKMP.Rounds.Client.Combat;
+using HKMP.Rounds.Settings;
 using Modding;
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace HKMP.Rounds.Client
@@ -12,7 +15,6 @@ namespace HKMP.Rounds.Client
     internal static class RoundPreparation
     {
         private const int DefaultRoundSoul = 198;
-        private const int BenchLookupTimeoutFrames = 600;
         private const int MantisWallSettleFrames = 8;
 
         private const string MantisLordsScene =
@@ -30,6 +32,9 @@ namespace HKMP.Rounds.Client
         private static bool _mantisWallWasBroken;
         private static bool _lastBenchStateCaptured;
         private static bool _forceCapturedBenchRespawnType;
+        private static bool _giveLifebloodMasks;
+        private static int _lifebloodMaskCount;
+        private static bool _blueHealthHookInstalled;
         private static string _lastBenchSceneName;
 
         private static uint _preparingRoundId;
@@ -47,6 +52,11 @@ namespace HKMP.Rounds.Client
         private static Coroutine _mantisWallCoroutine;
         private static Coroutine _returnToBenchCoroutine;
 
+        public static bool IsApplyingRoundStartHealth
+        {
+            get { return _roundStartHealthCoroutine != null; }
+        }
+
         public static void Initialize()
         {
             if (_initialized)
@@ -55,6 +65,13 @@ namespace HKMP.Rounds.Client
             }
 
             _initialized = true;
+
+            if (!_blueHealthHookInstalled)
+            {
+                ModHooks.BlueHealthHook -= GetRoundLifebloodBonus;
+                ModHooks.BlueHealthHook += GetRoundLifebloodBonus;
+                _blueHealthHookInstalled = true;
+            }
 
             ModHooks.AfterPlayerDeadHook +=
                 OnAfterPlayerDead;
@@ -165,7 +182,8 @@ namespace HKMP.Rounds.Client
         }
 
         public static void BeginRound(
-            uint roundId)
+            uint roundId,
+            bool giveLifebloodMasks)
         {
             _roundGeneration++;
             _roundId =
@@ -178,6 +196,8 @@ namespace HKMP.Rounds.Client
             _mantisWallWasBroken = false;
             _lastBenchStateCaptured = false;
             _forceCapturedBenchRespawnType = false;
+            _giveLifebloodMasks = giveLifebloodMasks;
+            _lifebloodMaskCount = giveLifebloodMasks ? 2 : 0;
 
             _lastBenchMarkerName = null;
             _lastBenchSceneName = null;
@@ -187,8 +207,8 @@ namespace HKMP.Rounds.Client
 
             CancelRoundCoroutines();
 
+            BenchPolicyController.RestoreLastRealRespawn();
             CaptureLastBenchState();
-
             RoundRoomExitBlocker.BlockCurrentRoom();
 
             StartLastBenchTracker(
@@ -229,15 +249,30 @@ namespace HKMP.Rounds.Client
             }
         }
 
+        public static bool IsReturnToBenchPending
+        {
+            get { return _returnToBenchPending; }
+        }
+
+        public static bool IsGameplayTransitionPending
+        {
+            get
+            {
+                return _returnToBenchPending || (_localDeathStarted && !_localDeathCompleted);
+            }
+        }
+
         public static void NotifyRoundEnded(
             uint roundId)
         {
-            if (roundId != _roundId ||
-                _returnToBenchPending)
+            if (roundId != _roundId || _returnToBenchPending)
             {
                 return;
             }
 
+            _returnToBenchPending = true;
+            _lifebloodMaskCount = 0;
+            RoundsSettingsUI.CloseForGameplayTransition();
             CaptureLastBenchState();
 
             RoundRoomExitBlocker.Release();
@@ -245,8 +280,6 @@ namespace HKMP.Rounds.Client
             ObserveMantisWallState();
             PreserveMantisLordsBreakableWall();
             EnforceMantisWallState();
-
-            _returnToBenchPending = true;
 
             StartReturnToBench(
                 _roundGeneration);
@@ -286,6 +319,8 @@ namespace HKMP.Rounds.Client
             _mantisWallWasBroken = false;
             _lastBenchStateCaptured = false;
             _forceCapturedBenchRespawnType = false;
+            _giveLifebloodMasks = false;
+            _lifebloodMaskCount = 0;
 
             _lastBenchMarkerName = null;
             _lastBenchSceneName = null;
@@ -294,6 +329,7 @@ namespace HKMP.Rounds.Client
                 GlobalEnums.MapZone.NONE;
 
             CancelRoundCoroutines();
+            PhantomMapClientController.ClearPendingPhantomDeathReturn();
 
             RoundRoomExitBlocker.Release();
 
@@ -308,6 +344,7 @@ namespace HKMP.Rounds.Client
                 return;
             }
 
+            RoundsSettingsUI.CloseForGameplayTransition();
             _localDeathCompleted = true;
 
             if (_returnToBenchPending)
@@ -391,53 +428,40 @@ namespace HKMP.Rounds.Client
 
         private static void CaptureLastBenchState()
         {
-            PlayerData data =
-                PlayerData.instance;
-
+            PlayerData data = PlayerData.instance;
             if (data == null)
             {
                 return;
             }
 
-            if (!data.atBench &&
-                data.respawnType != 1)
+            if (!data.atBench && data.respawnType != 1)
             {
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    data.respawnScene) ||
-                string.IsNullOrWhiteSpace(
-                    data.respawnMarkerName))
+            if (string.IsNullOrWhiteSpace(data.respawnScene) ||
+                string.IsNullOrWhiteSpace(data.respawnMarkerName))
             {
                 return;
             }
 
-            _lastBenchSceneName =
-                data.respawnScene;
+            ClientPreferencesStore.RememberLastRealBench(
+                data.respawnScene,
+                data.respawnMarkerName,
+                (int)data.mapZone);
 
-            _lastBenchMarkerName =
-                data.respawnMarkerName;
-
-            _lastBenchRespawnType =
-                1;
-
-            _lastBenchMapZone =
-                data.mapZone;
-
+            _lastBenchSceneName = data.respawnScene;
+            _lastBenchMarkerName = data.respawnMarkerName;
+            _lastBenchRespawnType = 1;
+            _lastBenchMapZone = data.mapZone;
             _lastBenchStateCaptured = true;
         }
 
-        public static void ApplyRoundStartHealth()
+        public static void ApplyRoundStartHealth(bool giveLifebloodMasks)
         {
-            SetFullHealth();
-
-            StopCoroutineSafe(
-                ref _roundStartHealthCoroutine);
-
-            _roundStartHealthCoroutine =
-                StartCoroutine(
-                    RefreshRoundStartHealthVisuals());
+            _giveLifebloodMasks = giveLifebloodMasks;
+            StopCoroutineSafe(ref _roundStartHealthCoroutine);
+            _roundStartHealthCoroutine = StartCoroutine(RefreshRoundStartHealthVisuals());
         }
 
         private static IEnumerator RefreshRoundStartHealthVisuals()
@@ -445,44 +469,311 @@ namespace HKMP.Rounds.Client
             yield return null;
             yield return null;
 
-            if (RoundClientManager.IsRoundActive)
+            int generation = _roundGeneration;
+            if (!RoundClientManager.IsRoundActive || _roundId == 0)
             {
-                SetFullHealth();
+                _roundStartHealthCoroutine = null;
+                yield break;
+            }
+
+            if (PvpModeClientController.IsOneShotRound)
+            {
+                PvpModeClientController.ApplyOneShotHealth();
+            }
+            else
+            {
+                yield return HealMissingMasks(generation);
+                if (!CanApplyRoundStartHealth(generation))
+                {
+                    _roundStartHealthCoroutine = null;
+                    yield break;
+                }
+
+                if (_giveLifebloodMasks)
+                {
+                    yield return RebuildLifebloodMasks(2);
+                }
+            }
+
+            if (generation == _roundGeneration && RoundClientManager.IsRoundActive)
+            {
+                RefreshHealthVisuals();
                 ClientHealthTracker.ReportCurrentHealth();
             }
 
             _roundStartHealthCoroutine = null;
         }
 
-        private static void SetFullHealth()
+        private static IEnumerator RebuildLifebloodMasks(int count)
         {
-            PlayerData data =
-                PlayerData.instance;
+            int generation = _roundGeneration;
+            if (PlayerData.instance == null ||
+                count <= 0 ||
+                !RoundClientManager.IsRoundActive ||
+                PvpModeClientController.IsOneShotRound)
+            {
+                yield break;
+            }
 
-            if (data == null)
+            ApplyLifebloodMasks(count);
+            RefreshHealthVisuals();
+            yield return new WaitForEndOfFrame();
+
+            if (!CanApplyRoundStartHealth(generation))
+            {
+                yield break;
+            }
+
+            PlayerData data = PlayerData.instance;
+            if (data != null && data.healthBlue >= count)
+            {
+                DestroyLifebloodCocoonsAndMites();
+                yield break;
+            }
+
+            Modding.Logger.LogError(
+                "[HKMP.Rounds] Lifeblood masks were not applied by the game's blue-health update; health cocoons were left intact.");
+        }
+
+        private static bool CanApplyRoundStartHealth(int generation)
+        {
+            return generation == _roundGeneration &&
+                   _roundId != 0 &&
+                   RoundClientManager.IsRoundActive &&
+                   !PvpModeClientController.IsOneShotRound &&
+                   !_returnToBenchPending;
+        }
+
+        private static int GetRoundLifebloodBonus()
+        {
+            if (_lifebloodMaskCount <= 0 ||
+                !_giveLifebloodMasks ||
+                !RoundClientManager.IsRoundActive ||
+                PvpModeClientController.IsOneShotRound ||
+                _returnToBenchPending ||
+                _localDeathStarted)
+            {
+                return 0;
+            }
+
+            return _lifebloodMaskCount;
+        }
+
+        private static bool ApplyLifebloodMasks(int count)
+        {
+            PlayerData data = PlayerData.instance;
+            if (data == null || count <= 0 ||
+                !RoundClientManager.IsRoundActive ||
+                PvpModeClientController.IsOneShotRound)
+            {
+                return false;
+            }
+
+            _giveLifebloodMasks = true;
+            _lifebloodMaskCount = count;
+            data.damagedBlue = false;
+
+            try
+            {
+                data.UpdateBlueHealth();
+                EventRegister.SendEvent("UPDATE BLUE HEALTH");
+                PlayMakerFSM.BroadcastEvent("UPDATE BLUE HEALTH");
+                return data.healthBlue >= count;
+            }
+            catch (Exception exception)
+            {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] Could not apply round lifeblood masks: " + exception.Message);
+                return false;
+            }
+        }
+
+        private static void RefreshHealthVisuals()
+        {
+            try
+            {
+                EventRegister.SendEvent("UPDATE HEALTH");
+                EventRegister.SendEvent("UPDATE BLUE HEALTH");
+                PlayMakerFSM.BroadcastEvent("UPDATE HEALTH");
+                PlayMakerFSM.BroadcastEvent("UPDATE BLUE HEALTH");
+            }
+            catch (Exception exception)
+            {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] Could not refresh the health HUD after round setup: " + exception.Message);
+            }
+        }
+
+        private static void DestroyLifebloodCocoonsAndMites()
+        {
+            Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!activeScene.IsValid() || !activeScene.isLoaded)
             {
                 return;
             }
 
-            int maxHealth =
-                Math.Max(
-                    0,
-                    data.maxHealth);
+            bool activeIsMantis = string.Equals(activeScene.name, MantisLordsScene, StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(activeScene.name, "Fungus2_31", StringComparison.OrdinalIgnoreCase);
+            HashSet<GameObject> targets = new HashSet<GameObject>();
+            int sceneCount = UnityEngine.SceneManagement.SceneManager.sceneCount;
 
-            data.health =
-                maxHealth;
+            for (int sceneIndex = 0; sceneIndex < sceneCount; sceneIndex++)
+            {
+                Scene scene;
+                try
+                {
+                    scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(sceneIndex);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    continue;
+                }
+
+                bool isPairedMantisScene = activeIsMantis &&
+                    (string.Equals(scene.name, MantisLordsScene, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(scene.name, "Fungus2_31", StringComparison.OrdinalIgnoreCase));
+                if (scene.handle != activeScene.handle && !isPairedMantisScene)
+                {
+                    continue;
+                }
+
+                GameObject[] roots;
+                try
+                {
+                    roots = scene.GetRootGameObjects();
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < roots.Length; i++)
+                {
+                    GameObject root = roots[i];
+                    if (root == null)
+                    {
+                        continue;
+                    }
+
+                    Component[] components = root.GetComponentsInChildren<Component>(true);
+                    for (int j = 0; j < components.Length; j++)
+                    {
+                        Component component = components[j];
+                        if (component == null || component.gameObject == null)
+                        {
+                            continue;
+                        }
+
+                        string typeName = component.GetType().Name;
+                        string objectName = component.gameObject.name ?? string.Empty;
+                        string normalizedName = objectName.ToLowerInvariant();
+                        bool isCocoon = string.Equals(typeName, "HealthCocoon", StringComparison.Ordinal);
+                        bool isScuttler = string.Equals(typeName, "ScuttlerControl", StringComparison.Ordinal);
+                        bool isLifebloodObject = normalizedName.Contains("lifeblood cocoon") ||
+                                                 normalizedName.Contains("health scuttler") ||
+                                                 normalizedName.Contains("lifeblood scuttler") ||
+                                                 normalizedName.Contains("lifeseed");
+
+                        if (isCocoon || isScuttler || isLifebloodObject)
+                        {
+                            targets.Add(component.gameObject);
+                        }
+                    }
+                }
+            }
+
+            foreach (GameObject target in targets)
+            {
+                if (target != null)
+                {
+                    target.SetActive(false);
+                    Object.Destroy(target);
+                }
+            }
+        }
+
+        private static IEnumerator HealMissingMasks(int generation)
+        {
+            PlayerData data = PlayerData.instance;
+            HeroController hero = HeroController.instance;
+            if (data == null || hero == null || !CanApplyRoundStartHealth(generation))
+            {
+                yield break;
+            }
 
             data.healthBlue = 0;
             data.joniHealthBlue = 0;
             data.damagedBlue = false;
+            RefreshHealthVisuals();
+            yield return new WaitForEndOfFrame();
 
-            HeroController hero =
-                HeroController.instance;
-
-            if (hero != null)
+            data = PlayerData.instance;
+            hero = HeroController.instance;
+            if (data == null || hero == null || !CanApplyRoundStartHealth(generation))
             {
-                hero.TakeHealth(0);
+                yield break;
             }
+
+            int targetHealth = Math.Max(
+                Math.Max(0, data.maxHealth),
+                Math.Max(0, data.maxHealthBase));
+
+            try
+            {
+                if (data.GetBool("equippedCharm_23"))
+                {
+                    targetHealth = Math.Max(
+                        targetHealth,
+                        Math.Max(0, data.maxHealthBase) + 2);
+                }
+            }
+            catch
+            {
+            }
+
+            int remaining = Math.Max(0, targetHealth - Math.Max(0, data.health));
+            for (int i = 0; i < remaining; i++)
+            {
+                if (!CanApplyRoundStartHealth(generation))
+                {
+                    yield break;
+                }
+
+                data = PlayerData.instance;
+                hero = HeroController.instance;
+                if (data == null || hero == null || data.health >= targetHealth)
+                {
+                    break;
+                }
+
+                int previousHealth = data.health;
+                hero.AddHealth(1);
+                yield return new WaitForEndOfFrame();
+
+                data = PlayerData.instance;
+                if (data == null)
+                {
+                    yield break;
+                }
+
+                if (data.health <= previousHealth)
+                {
+                    Modding.Logger.LogError(
+                        "[HKMP.Rounds] The game's AddHealth method did not increase health during round preparation. " +
+                        "CurrentHealth=" + data.health +
+                        " TargetHealth=" + targetHealth);
+                    yield break;
+                }
+
+                RefreshHealthVisuals();
+            }
+
+            RefreshHealthVisuals();
         }
 
         private static void SetFullRoundSoul(
@@ -531,223 +822,178 @@ namespace HKMP.Rounds.Client
         private static IEnumerator ReturnToLastBench(
             int generation)
         {
-            int remainingFrames =
-                BenchLookupTimeoutFrames;
-
-            while (_returnToBenchPending &&
-                   generation == _roundGeneration &&
-                   remainingFrames-- > 0)
+            float readinessDeadline = Time.realtimeSinceStartup + 45f;
+            while (_returnToBenchPending && generation == _roundGeneration &&
+                   Time.realtimeSinceStartup < readinessDeadline)
             {
-                HeroController hero =
-                    HeroController.instance;
-
-                PlayerData data =
-                    PlayerData.instance;
-
-                GameManager gameManager =
-                    GameManager.instance;
-
-                if (hero == null ||
-                    data == null ||
-                    gameManager == null)
+                HeroController hero = HeroController.instance;
+                PlayerData data = PlayerData.instance;
+                GameManager gameManager = GameManager.instance;
+                if (hero == null || data == null || gameManager == null || gameManager.IsInSceneTransition ||
+                    (hero.cState != null && hero.cState.dead) || (_localDeathStarted && !_localDeathCompleted))
                 {
                     yield return null;
                     continue;
                 }
 
-                if (hero.cState != null &&
-                    hero.cState.dead)
-                {
-                    yield return null;
-                    continue;
-                }
+                break;
+            }
 
-                if (_localDeathStarted &&
-                    !_localDeathCompleted)
-                {
-                    yield return null;
-                    continue;
-                }
-
-                if (!_lastBenchStateCaptured)
-                {
-                    CaptureLastBenchState();
-                }
-
-                if (!_lastBenchStateCaptured)
-                {
-                    Modding.Logger.LogError(
-                        "[HKMP.Rounds] Last bench respawn state is unavailable. " +
-                        "RoundId=" +
-                        _roundId);
-
-                    break;
-                }
-
-                data.respawnScene =
-                    _lastBenchSceneName;
-
-                data.respawnMarkerName =
-                    _lastBenchMarkerName;
-
-                data.respawnType =
-                    1;
-
-                data.mapZone =
-                    _lastBenchMapZone;
-
-                data.atBench = false;
-
-                StopCoroutineSafe(
-                    ref _lastBenchTrackerCoroutine);
-
-                hero.AffectedByGravity(
-                    false);
-
-                hero.transitionState =
-                    HeroTransitionState.EXITING_SCENE;
-
-                if (hero.cState != null)
-                {
-                    if (hero.cState.onConveyor ||
-                        hero.cState.onConveyorV ||
-                        hero.cState.inConveyorZone)
-                    {
-                        ConveyorMovementHero conveyor =
-                            hero.GetComponent<
-                                ConveyorMovementHero>();
-
-                        if (conveyor != null)
-                        {
-                            conveyor.StopConveyorMove();
-                        }
-
-                        hero.cState.inConveyorZone =
-                            false;
-
-                        hero.cState.onConveyor =
-                            false;
-
-                        hero.cState.onConveyorV =
-                            false;
-                    }
-
-                    hero.cState.nearBench =
-                        false;
-                }
-
-                try
-                {
-                    gameManager.cameraCtrl.FadeOut(
-                        CameraFadeType.LEVEL_TRANSITION);
-                }
-                catch
-                {
-                }
-
-                yield return new WaitForSecondsRealtime(
-                    0.5f);
-
-                try
-                {
-                    gameManager.SetPlayerDataBool(
-                        nameof(PlayerData.atBench),
-                        false);
-                }
-                catch
-                {
-                    data.atBench = false;
-                }
-
-                if (hero.cState != null)
-                {
-                    hero.cState.superDashing = false;
-                    hero.cState.spellQuake = false;
-                }
-
-                _forceCapturedBenchRespawnType = true;
-
-                try
-                {
-                    gameManager.ReadyForRespawn(
-                        false);
-                }
-                catch (Exception exception)
-                {
-                    Modding.Logger.LogError(
-                        "[HKMP.Rounds] Failed to start vanilla respawn at the last bench. " +
-                        "RoundId=" +
-                        _roundId +
-                        " Exception=" +
-                        exception);
-
-                    _forceCapturedBenchRespawnType = false;
-                    break;
-                }
-
-                yield return new WaitWhile(
-                    () =>
-                        GameManager.instance != null &&
-                        GameManager.instance.IsInSceneTransition);
-
-                _forceCapturedBenchRespawnType = false;
-
-                try
-                {
-                    EventRegister.SendEvent(
-                        "UPDATE BLUE HEALTH");
-                }
-                catch
-                {
-                }
-
-                Time.timeScale = 1f;
-
-                try
-                {
-                    gameManager.FadeSceneIn();
-                }
-                catch
-                {
-                }
-
-                gameManager.isPaused = false;
-
-                try
-                {
-                    GameCameras.instance.ResumeCameraShake();
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    hero.UnPause();
-                }
-                catch
-                {
-                }
-
-                TimeController.GenericTimeScale = 1f;
-
-                _returnToBenchPending = false;
-                _localDeathStarted = false;
-                _localDeathCompleted = false;
-                _returnToBenchCoroutine = null;
-
-                RoundEnemyController.Disable();
-                DebugShadeController.Disable();
-
+            if (!_returnToBenchPending || generation != _roundGeneration)
+            {
                 yield break;
             }
 
+            HeroController readyHero = HeroController.instance;
+            GameManager readyManager = GameManager.instance;
+            if (readyHero == null || PlayerData.instance == null || readyManager == null ||
+                readyManager.IsInSceneTransition || (readyHero.cState != null && readyHero.cState.dead))
+            {
+                Modding.Logger.LogError("[HKMP.Rounds] The player did not become ready for round-end bench return.");
+                FinishRoundEndBenchReturn();
+                yield break;
+            }
+
+            BenchLocation target;
+            bool exactSelection;
+            string resolutionMessage;
+            bool resolved = BenchPolicyController.TryResolveWarpTarget(
+                out target,
+                out exactSelection,
+                out resolutionMessage);
+            if (!resolved && !exactSelection)
+            {
+                if (PhantomMapClientController.TryGetActivePhantomBenchTarget(out target))
+                {
+                    exactSelection = true;
+                    resolutionMessage = "Using the paired phantom Mantis return bench.";
+                }
+                else
+                {
+                    target = ResolveRoundEndFallbackBench(null);
+                }
+            }
+
+            if (target == null || !target.IsValid)
+            {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] Round-end warp has no valid destination. " + resolutionMessage);
+                FinishRoundEndBenchReturn();
+                yield break;
+            }
+
+            if (!BenchPolicyController.CanUseBenchLocation(target))
+            {
+                Modding.Logger.LogError(
+                    "[HKMP.Rounds] The resolved round-end bench is unavailable on this client: " + target.DisplayName);
+                FinishRoundEndBenchReturn();
+                yield break;
+            }
+
+            StopCoroutineSafe(ref _lastBenchTrackerCoroutine);
+            List<BenchLocation> targets = new List<BenchLocation> { target };
+            if (!exactSelection)
+            {
+                BenchLocation fallback = ResolveRoundEndFallbackBench(target);
+                if (fallback != null && fallback.IsValid)
+                {
+                    targets.Add(fallback);
+                }
+            }
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (!_returnToBenchPending || generation != _roundGeneration)
+                {
+                    yield break;
+                }
+
+                BenchLocation currentTarget = targets[i];
+                bool keepPhantomInstance = PhantomMapClientController.ShouldKeepActivePhantomInstanceForBench(currentTarget);
+                if (!keepPhantomInstance)
+                {
+                    PhantomMapClientController.ClearPendingPhantomDeathReturn();
+                    PhantomMapClientController.ReturnToNormalMantisInstance();
+                }
+
+                string message;
+                if (!EmergencyBenchWarpController.TryWarpToBench(currentTarget, true, out message))
+                {
+                    Modding.Logger.LogError("[HKMP.Rounds] Round-end bench warp could not start for '" +
+                        currentTarget.DisplayName + "': " + message);
+                    continue;
+                }
+
+                float deadline = Time.realtimeSinceStartup + 45f;
+                while (EmergencyBenchWarpController.IsWarpRunning &&
+                       Time.realtimeSinceStartup < deadline &&
+                       generation == _roundGeneration)
+                {
+                    yield return null;
+                }
+
+                if (EmergencyBenchWarpController.IsWarpRunning)
+                {
+                    Modding.Logger.LogError("[HKMP.Rounds] Round-end bench warp did not finish before the safety timeout.");
+                    break;
+                }
+
+                if (IsRoundEndWarpComplete(currentTarget))
+                {
+                    FinishRoundEndBenchReturn();
+                    yield break;
+                }
+
+                Modding.Logger.LogError("[HKMP.Rounds] Round-end bench warp did not reach a safe marker in '" +
+                    currentTarget.SceneName + "'." + (i == 0 && targets.Count > 1
+                        ? " Retrying at a built-in fallback bench."
+                        : string.Empty));
+            }
+
+            if (generation == _roundGeneration)
+            {
+                FinishRoundEndBenchReturn();
+            }
+        }
+
+        private static BenchLocation ResolveRoundEndFallbackBench(BenchLocation excluded)
+        {
+            List<BenchLocation> benches = BenchCatalog.GetBuiltInCatalog()
+                .Where(location => location != null && location.IsValid &&
+                    (excluded == null ||
+                     !string.Equals(location.SceneName, excluded.SceneName, StringComparison.OrdinalIgnoreCase) ||
+                     !string.Equals(location.MarkerName, excluded.MarkerName, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            return benches.FirstOrDefault(location =>
+                       string.Equals(location.SceneName, "Town", StringComparison.OrdinalIgnoreCase) &&
+                       string.Equals(location.MarkerName, "RestBench", StringComparison.OrdinalIgnoreCase)) ??
+                   benches.FirstOrDefault();
+        }
+
+        private static bool IsRoundEndWarpComplete(BenchLocation target)
+        {
+            GameManager manager = GameManager.instance;
+            HeroController hero = HeroController.instance;
+            PlayerData data = PlayerData.instance;
+            if (target == null || manager == null || manager.IsInSceneTransition || hero == null || data == null ||
+                (hero.cState != null && hero.cState.dead) ||
+                !string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, target.SceneName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return EmergencyBenchWarpController.IsHeroNearBench(hero, target);
+        }
+
+        private static void FinishRoundEndBenchReturn()
+        {
             _returnToBenchPending = false;
             _localDeathStarted = false;
             _localDeathCompleted = false;
             _forceCapturedBenchRespawnType = false;
+            PhantomMapClientController.ClearPendingPhantomDeathReturn();
             _returnToBenchCoroutine = null;
-
             RoundEnemyController.Disable();
             DebugShadeController.Disable();
         }

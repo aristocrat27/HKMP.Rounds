@@ -15,21 +15,7 @@ namespace HKMP.Rounds.Server.Stats
             new Dictionary<string, StatsData>(
                 StringComparer.OrdinalIgnoreCase);
 
-        public int PlayerCount
-        {
-            get
-            {
-                return _players.Count;
-            }
-        }
 
-        public int TeamCount
-        {
-            get
-            {
-                return _teams.Count;
-            }
-        }
 
         public void RegisterPlayer(
             string playerName)
@@ -134,41 +120,29 @@ namespace HKMP.Rounds.Server.Stats
             return true;
         }
 
-        public bool TryGetStats(
-            string name,
-            out StatsData stats)
-        {
-            stats = null;
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return false;
-            }
-
-            string key =
-                name.Trim();
-
-            if (_players.TryGetValue(
-                key,
-                out stats))
-            {
-                return true;
-            }
-
-            return _teams.TryGetValue(
-                key,
-                out stats);
-        }
 
         public IReadOnlyList<StatsData> GetSortedStats()
         {
-            return _players.Values
-                .Concat(_teams.Values)
-                .OrderByDescending(
-                    x => x.Wins)
-                .ThenBy(
-                    x => x.PlayerName,
-                    StringComparer.OrdinalIgnoreCase)
+            return GetSortedStats(false, false);
+        }
+
+        public IReadOnlyList<StatsData> GetSortedStats(
+            bool teamsEnabled,
+            bool individualTeamWins)
+        {
+            IEnumerable<StatsData> source;
+            if (teamsEnabled && !individualTeamWins)
+            {
+                source = _teams.Values;
+            }
+            else
+            {
+                source = _players.Values;
+            }
+
+            return source
+                .OrderByDescending(x => x.Wins)
+                .ThenBy(x => x.PlayerName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 

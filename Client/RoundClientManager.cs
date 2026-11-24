@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using HKMP.Rounds.Client.Combat;
 
 namespace HKMP.Rounds.Client
@@ -28,7 +28,8 @@ namespace HKMP.Rounds.Client
         }
 
         public static void StartRound(
-            uint roundId)
+            uint roundId,
+            bool giveLifebloodMasks)
         {
             _roundActive =
                 true;
@@ -37,9 +38,11 @@ namespace HKMP.Rounds.Client
                 roundId;
 
             _deadPlayers.Clear();
+            ReadyBenchStateReporter.NotifyRoundStarted();
 
             RoundPreparation.BeginRound(
-                roundId);
+                roundId,
+                giveLifebloodMasks);
 
             ClientDeathTracker.Reset();
             ClientHealthTracker.Reset();
@@ -57,6 +60,7 @@ namespace HKMP.Rounds.Client
 
             _roundActive =
                 false;
+            ReadyBenchStateReporter.NotifyRoundEnded();
 
             _deadPlayers.Clear();
 
@@ -93,6 +97,7 @@ namespace HKMP.Rounds.Client
         {
             _roundActive =
                 false;
+            ReadyBenchStateReporter.ResetReadyGate();
 
             _currentRoundId =
                 0;

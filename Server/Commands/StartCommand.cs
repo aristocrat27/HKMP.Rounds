@@ -1,4 +1,5 @@
-using Hkmp.Api.Command.Server;
+﻿using Hkmp.Api.Command.Server;
+using Hkmp.Api.Command;
 
 namespace HKMP.Rounds.Server.Commands
 {
@@ -24,7 +25,7 @@ namespace HKMP.Rounds.Server.Commands
         {
             get
             {
-                return new string[0];
+                return new[] { "/round" };
             }
         }
 
@@ -40,6 +41,27 @@ namespace HKMP.Rounds.Server.Commands
             ICommandSender sender,
             string[] arguments)
         {
+            IPlayerCommandSender playerSender = sender as IPlayerCommandSender;
+            if (playerSender != null)
+            {
+                using (_roundManager.EnterPlayerContext(playerSender.Id))
+                {
+                    ExecuteInCurrentContext(sender, arguments);
+                }
+                return;
+            }
+
+            ExecuteInCurrentContext(sender, arguments);
+        }
+
+        private void ExecuteInCurrentContext(ICommandSender sender, string[] arguments)
+        {
+            if (arguments != null && arguments.Length > 1)
+            {
+                sender.SendMessage("Round administration is available in the HKMP.Rounds settings UI.");
+                return;
+            }
+
             if (_roundManager.IsRoundActive ||
                 _roundManager.IsWaitingForPreparation)
             {

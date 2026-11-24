@@ -1,30 +1,46 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<HollowKnightManaged>D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed</HollowKnightManaged>
+		<HollowKnightManaged Condition="'$(HollowKnightManaged)' == ''">D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed</HollowKnightManaged>
 		<ModsDir>$(HollowKnightManaged)\Mods</ModsDir>
 		<RootNamespace>HKMP.Rounds</RootNamespace>
 		<AssemblyName>HKMP.Rounds</AssemblyName>
 		<TargetFramework>net472</TargetFramework>
 		<AssemblyTitle>HKMP.Rounds</AssemblyTitle>
+		<Version>2.0.0.0</Version>
+		<InformationalVersion>2.0.0.0</InformationalVersion>
 		<Product>HKMP.Rounds</Product>
-		<Description>HKMP round and statistics addon</Description>
-		<AssemblyVersion>1.1.0.0</AssemblyVersion>
-		<FileVersion>1.1.0.0</FileVersion>
+		<AssemblyVersion>2.0.0.0</AssemblyVersion>
+		<FileVersion>2.0.0.0</FileVersion>
 		<OutputPath>bin\$(Configuration)\</OutputPath>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
+		<Reference Include="Assembly-CSharp-firstpass">
+			<HintPath>$(HollowKnightManaged)\Assembly-CSharp-firstpass.dll</HintPath>
+		</Reference>
+		<Reference Include="Satchel">
+			<HintPath>$(ModsDir)\Satchel\Satchel.dll</HintPath>
+		</Reference>
 		<Reference Include="Assembly-CSharp">
 			<HintPath>$(HollowKnightManaged)\Assembly-CSharp.dll</HintPath>
 		</Reference>
 		<Reference Include="HKMP">
-		  <HintPath>..\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Mods\HKMP\HKMP.dll</HintPath>
+			<HintPath>$(HollowKnightManaged)\Mods\HKMP\HKMP.dll</HintPath>
 		</Reference>
 		<Reference Include="MMHOOK_Assembly-CSharp">
 			<HintPath>$(HollowKnightManaged)\MMHOOK_Assembly-CSharp.dll</HintPath>
 		</Reference>
+		<Reference Include="MMHOOK_PlayMaker">
+		  <HintPath>D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\MMHOOK_PlayMaker.dll</HintPath>
+		</Reference>
+		<Reference Include="Mono.Cecil">
+			<HintPath>$(HollowKnightManaged)\Mono.Cecil.dll</HintPath>
+		</Reference>
 		<Reference Include="MonoMod.RuntimeDetour">
 			<HintPath>$(HollowKnightManaged)\MonoMod.RuntimeDetour.dll</HintPath>
+		</Reference>
+		<Reference Include="MonoMod.Utils">
+			<HintPath>$(HollowKnightManaged)\MonoMod.Utils.dll</HintPath>
 		</Reference>
 		<Reference Include="netstandard">
 			<HintPath>$(HollowKnightManaged)\netstandard.dll</HintPath>
@@ -33,17 +49,57 @@
 			<HintPath>$(HollowKnightManaged)\Newtonsoft.Json.dll</HintPath>
 		</Reference>
 		<Reference Include="PlayMaker">
-		  <HintPath>..\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\PlayMaker.dll</HintPath>
+			<HintPath>$(HollowKnightManaged)\PlayMaker.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine">
 			<HintPath>$(HollowKnightManaged)\UnityEngine.dll</HintPath>
 		</Reference>
+		<Reference Include="UnityEngine.AnimationModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.AnimationModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AudioModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.AudioModule.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>$(HollowKnightManaged)\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ImageConversionModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.ImageConversionModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.IMGUIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.InputLegacyModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.InputLegacyModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.JSONSerializeModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.JSONSerializeModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ParticleSystemModule">
+		  <HintPath>D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.Physics2DModule">
 			<HintPath>$(HollowKnightManaged)\UnityEngine.Physics2DModule.dll</HintPath>
 		</Reference>
+		<Reference Include="UnityEngine.TextRenderingModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.UI.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UIModule">
+			<HintPath>$(HollowKnightManaged)\UnityEngine.UIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestWWWModule">
+		  <HintPath>D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\benches.json" LogicalName="HKMP.Rounds.Resources.benches.json" />
+		<EmbeddedResource Include="Resources\oneshot_niko.png" LogicalName="HKMP.Rounds.Resources.oneshot_niko.png" />
+		<EmbeddedResource Include="Resources\quick_mode.png" LogicalName="HKMP.Rounds.Resources.quick_mode.png" Condition="Exists('Resources\quick_mode.png')" />
+		<EmbeddedResource Include="Resources\long_mode.png" LogicalName="HKMP.Rounds.Resources.long_mode.png" Condition="Exists('Resources\long_mode.png')" />
+		<EmbeddedResource Include="Resources\Maps\map_*.png" LogicalName="HKMP.Rounds.Resources.Maps.%(Filename)%(Extension)" />
 	</ItemGroup>
 	<Target Name="ExportMod" AfterTargets="Build">
 		<MakeDir Directories="$(ModsDir)\HKMP.Rounds" />

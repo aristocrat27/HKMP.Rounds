@@ -1,4 +1,4 @@
-using Hkmp.Api.Command.Server;
+﻿using Hkmp.Api.Command.Server;
 using HKMP.Rounds.Server.Stats;
 
 namespace HKMP.Rounds.Server.Commands
@@ -44,8 +44,14 @@ namespace HKMP.Rounds.Server.Commands
             ICommandSender sender,
             string[] arguments)
         {
+            if (_roundManager.HasAnyRoundInProgress)
+            {
+                sender.SendMessage("Statistics can only be reset when no room has an active or preparing round.");
+                return;
+            }
+
             _stats.Reset();
-            _roundManager.ResetMatchScores();
+            _roundManager.ResetAllMatchScores();
 
             sender.SendMessage(
                 "Statistics and current match scores have been reset.");

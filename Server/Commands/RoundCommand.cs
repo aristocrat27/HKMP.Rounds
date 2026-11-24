@@ -1,4 +1,5 @@
 ﻿using Hkmp.Api.Command.Server;
+using Hkmp.Api.Command;
 using System;
 
 namespace HKMP.Rounds.Server.Commands
@@ -40,6 +41,21 @@ namespace HKMP.Rounds.Server.Commands
         public void Execute(
             ICommandSender sender,
             string[] arguments)
+        {
+            IPlayerCommandSender playerSender = sender as IPlayerCommandSender;
+            if (playerSender != null)
+            {
+                using (_roundManager.EnterPlayerContext(playerSender.Id))
+                {
+                    ExecuteInCurrentContext(sender, arguments);
+                }
+                return;
+            }
+
+            ExecuteInCurrentContext(sender, arguments);
+        }
+
+        private void ExecuteInCurrentContext(ICommandSender sender, string[] arguments)
         {
             if (arguments == null ||
                 arguments.Length < 2)
@@ -216,11 +232,10 @@ namespace HKMP.Rounds.Server.Commands
                 return;
             }
 
-            if (_roundManager.IsRoundActive ||
-                _roundManager.IsWaitingForPreparation)
+            if (_roundManager.HasAnyRoundInProgress)
             {
                 sender.SendMessage(
-                    "Round MP can only be changed before a round starts.");
+                    "Round MP can only be changed when no room has an active or preparing round.");
                 return;
             }
 
@@ -262,11 +277,10 @@ namespace HKMP.Rounds.Server.Commands
                 return;
             }
 
-            if (_roundManager.IsRoundActive ||
-                _roundManager.IsWaitingForPreparation)
+            if (_roundManager.HasAnyRoundInProgress)
             {
                 sender.SendMessage(
-                    "Enemy disabling can only be changed before a round starts.");
+                    "Enemy disabling can only be changed when no room has an active or preparing round.");
                 return;
             }
 
@@ -304,11 +318,10 @@ namespace HKMP.Rounds.Server.Commands
                 return;
             }
 
-            if (_roundManager.IsRoundActive ||
-                _roundManager.IsWaitingForPreparation)
+            if (_roundManager.HasAnyRoundInProgress)
             {
                 sender.SendMessage(
-                    "Debug settings can only be changed before a round starts.");
+                    "Debug settings can only be changed when no room has an active or preparing round.");
                 return;
             }
 

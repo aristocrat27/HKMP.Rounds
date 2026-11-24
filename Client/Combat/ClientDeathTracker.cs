@@ -30,7 +30,8 @@ namespace HKMP.Rounds.Client.Combat
         {
             if (!_initialized ||
                 !RoundClientManager.IsRoundActive ||
-                _network == null)
+                _network == null ||
+                !PvpModeClientController.IsAttackerAllowed(killerId))
             {
                 return;
             }
@@ -81,14 +82,19 @@ namespace HKMP.Rounds.Client.Combat
                 return;
             }
 
-            RoundPreparation.NotifyLocalDeathStarted();
-            ClientHealthTracker.ReportCurrentHealth();
-
             if (_deathReported)
             {
                 return;
             }
 
+            ushort recentKillerId;
+            if (LastAttackerTracker.TryGetRecentAttacker(out recentKillerId))
+            {
+                ReportPvpDeath(recentKillerId);
+                return;
+            }
+
+            RoundPreparation.NotifyLocalDeathStarted();
             uint roundId =
                 RoundClientManager.CurrentRoundId;
 
